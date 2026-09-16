@@ -1,0 +1,76 @@
+name: Pull request checks
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  quality:
+    name: Linux quality and coverage
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build Linux validation image
+        run: docker build --pull=false -f Dockerfile.ci -t prismaticlauncher-ci:ci .
+      - name: Run Linux validation
+        run: docker run --rm prismaticlauncher-ci:ci
+      - name: Run infrastructure smoke test
+        run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/verify-infrastructure.sh
+      - name: Check formatting
+        run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/format-check.sh
+      - name: Run static analysis
+        run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/static-analysis.sh
+      - name: Upload diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: linux-diagnostics
+          path: |
+            coverage/
+            build/
+          if-no-files-found: ignore
+
+  native-build:
+    name: Native CMake validation (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, macos-14]
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure CMake
+        run: cmake --preset dev
+      - name: Build CMake targets
+        run: cmake --build --preset dev
+      - name: Discover CTest tests
+        run: ctest --preset dev --show-only=json-v1
+
+  secrets:
+    name: Secret scan
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  codeql:
+    name: CodeQL
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: c-cpp
+          build-mode: none
+      - uses: github/codeql-action/analyze@v3

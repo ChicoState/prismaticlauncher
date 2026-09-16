@@ -1,0 +1,43 @@
+FROM ubuntu:24.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+ARG VCPKG_COMMIT=e0a6b8572cf0ac716fdc11466522cf744e97e0bd
+
+RUN apt-get update \
+    && apt-get install --yes --no-install-recommends \
+        ca-certificates \
+        clang \
+        clang-format \
+        clang-tidy \
+        cmake \
+        cppcheck \
+        curl \
+        g++ \
+        gcovr \
+        git \
+        libgl1-mesa-dev \
+        ninja-build \
+        qt6-base-dev \
+        qt6-tools-dev \
+        unzip \
+        zip \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN git clone https://github.com/microsoft/vcpkg.git /opt/vcpkg \
+    && cd /opt/vcpkg \
+    && git checkout --detach "${VCPKG_COMMIT}" \
+    && ./bootstrap-vcpkg.sh -disableMetrics
+
+ENV VCPKG_ROOT=/opt/vcpkg
+ENV PATH="${VCPKG_ROOT}:${PATH}"
+
+RUN useradd --create-home --shell /bin/bash builder \
+    && mkdir /workspace \
+    && chown builder:builder /workspace
+
+USER builder
+WORKDIR /workspace
+
+COPY --chown=builder:builder . /workspace
+
+CMD ["bash", "scripts/ci-linux.sh"]

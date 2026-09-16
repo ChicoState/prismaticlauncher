@@ -1,0 +1,85 @@
+name: Release portable archives
+
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing v* tag to validate and release
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  prerequisites:
+    name: Validate release prerequisites
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/checkout@v4
+      - name: Require future product packaging configuration
+        run: |
+          test -f packaging/CMakeLists.txt || {
+            echo 'Release packaging has not been implemented. Add product-owned packaging configuration before releasing.' >&2
+            exit 1
+          }
+      - name: Require macOS notarization configuration
+        env:
+          APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          APPLE_ID: ${{ secrets.APPLE_ID }}
+          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
+          APPLE_TEAM_ID: ${{ vars.APPLE_TEAM_ID }}
+        run: |
+          test -n "$APPLE_CERTIFICATE" && test -n "$APPLE_CERTIFICATE_PASSWORD" && \
+          test -n "$APPLE_ID" && test -n "$APPLE_APP_SPECIFIC_PASSWORD" && test -n "$APPLE_TEAM_ID" || {
+            echo 'macOS signing and notarization configuration is incomplete.' >&2
+            exit 1
+          }
+
+  build:
+    name: Build portable archive (${{ matrix.name }})
+    needs: prerequisites
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: windows
+            os: windows-2022
+            archive: zip
+          - name: macos
+            os: macos-14
+            archive: zip
+          - name: linux
+            os: ubuntu-24.04
+            archive: tar.gz
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, package, and sign
+        run: packaging/release-${{ matrix.name }}.${{ runner.os == 'Windows' && 'ps1' || 'sh' }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.name }}-portable-archive
+          path: dist/*.${{ matrix.archive }}
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: build
+    runs-on: ubuntu-24.04
+    environment: release
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Generate SHA-256 checksums
+        run: cd dist && sha256sum * > SHA256SUMS.txt
+      - name: Create release with portable archives
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ github.ref_name || inputs.tag }}" dist/* --generate-notes
