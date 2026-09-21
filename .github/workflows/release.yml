@@ -61,7 +61,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Build, test, package, and sign
         run: packaging/release-${{ matrix.name }}.${{ runner.os == 'Windows' && 'ps1' || 'sh' }}
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: ${{ matrix.name }}-portable-archive
           path: dist/*.${{ matrix.archive }}
