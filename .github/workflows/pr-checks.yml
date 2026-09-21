@@ -13,7 +13,7 @@ jobs:
     name: Linux quality and coverage
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Linux validation image
         run: docker build --pull=false -f Dockerfile.ci -t prismaticlauncher-ci:ci .
       - name: Run Linux validation
@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: [windows-2022, macos-14]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Configure CMake
         run: cmake --preset dev
       - name: Build CMake targets
@@ -57,9 +57,10 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITLEAKS_LICENSE: ${{ secrets.GITLEAKS_LICENSE }}
 
   codeql:
     name: CodeQL
@@ -68,7 +69,7 @@ jobs:
       contents: read
       security-events: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: github/codeql-action/init@v3
         with:
           languages: c-cpp
