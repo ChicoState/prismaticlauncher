@@ -1,0 +1,8 @@
+{
+  "name": "prismaticlauncher",
+  "version-string": "0.0.0",
+  "description": "Infrastructure manifest for the future Prismatic Launcher Qt desktop application.",
+  "dependencies": [
+    "qtbase"
+  ]
+}

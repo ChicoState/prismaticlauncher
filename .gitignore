@@ -1,0 +1,44 @@
+# Build output and CMake state
+/build/
+/out/
+CMakeCache.txt
+CMakeFiles/
+CTestTestfile.cmake
+Testing/
+compile_commands.json
+
+# Coverage, static-analysis, and test reports
+/coverage/
+*.gcda
+*.gcno
+*.gcov
+cppcheck.xml
+clang-tidy*.yaml
+
+# Local dependencies and tool caches
+/vcpkg_installed/
+/vcpkg/buildtrees/
+/vcpkg/packages/
+/vcpkg/downloads/
+/.cache/
+
+# Logs and local application data
+*.log
+/logs/
+/data/
+
+# Environment and signing material
+.env
+.env.*
+!.env.example
+*.pem
+*.p12
+*.pfx
+*.key
+*.mobileprovision
+
+# IDE and operating-system files
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/

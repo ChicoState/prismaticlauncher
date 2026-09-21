@@ -1,0 +1,4 @@
+title = "Prismatic Launcher secret scanning policy"
+
+[extend]
+useDefault = true

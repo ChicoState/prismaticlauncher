@@ -1,0 +1,17 @@
+.git
+.agents
+build
+out
+coverage
+vcpkg_installed
+vcpkg/buildtrees
+vcpkg/packages
+vcpkg/downloads
+.cache
+.env
+.env.*
+*.log
+*.pem
+*.p12
+*.pfx
+*.key
