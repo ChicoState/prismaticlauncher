@@ -70,8 +70,22 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
+      - name: Check for C/C++ source
+        id: source-check
+        shell: bash
+        run: |
+          if [[ -d src ]] && find src -type f \
+            \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' \) \
+            -print -quit | grep -q .; then
+            echo "has_source=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_source=false" >> "$GITHUB_OUTPUT"
+            echo "No C/C++ source found; skipping CodeQL."
+          fi
       - uses: github/codeql-action/init@v3
+        if: steps.source-check.outputs.has_source == 'true'
         with:
           languages: c-cpp
           build-mode: none
       - uses: github/codeql-action/analyze@v3
+        if: steps.source-check.outputs.has_source == 'true'
