@@ -10,9 +10,9 @@ Prismatic Launcher is planned as a cross-platform native desktop manager for Sta
 - `tests/infrastructure/` — reserved for infrastructure-only probes; product tests are not present.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
-- `infrastructure_plan.md` — approved infrastructure decisions.
+- `prismatic-launcher/documents/infrastructure_plan.md` — approved infrastructure decisions.
 - `.agents/skills/` — repository-specific agent skills.
-- `src/` — not created yet; future product source belongs here.
+- `prismatic-launcher/src/` — product source belongs here.
 - `packaging/` — not created yet; future product-owned portable-archive packaging belongs here.
 
 ## Getting Started
