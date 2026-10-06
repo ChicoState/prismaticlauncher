@@ -6,16 +6,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
-
-find_package(Qt6 REQUIRED COMPONENTS Core)
-
-add_executable(prismatic_launcher
-    prismatic-launcher/src/main.cpp
-    prismatic-launcher/src/smapi/SmapiInstaller.cpp
-    prismatic-launcher/src/smapi/SmapiLauncher.cpp
-)
-
-target_link_libraries(prismatic_launcher PRIVATE Qt6::Core)
-
 include(CTest)
 
+# Application targets intentionally do not exist yet. Product implementation
+# should add targets under src/ and register its tests with add_test().
