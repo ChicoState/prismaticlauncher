@@ -1,0 +1,24 @@
+# Ubuntu 24.04 local-development packages.
+#
+# Install with:
+#     grep -Ev '^[[:space:]]*(#|$)' requirements.txt | xargs -r sudo apt-get install --yes --no-install-recommends
+#
+# This mirrors the direct packages installed by Dockerfile.ci. Qt is supplied
+# by the distribution packages here; vcpkg users should instead use the
+# qtbase dependency declared in vcpkg.json.
+ca-certificates
+clang
+clang-format
+clang-tidy
+cmake
+cppcheck
+curl
+g++
+gcovr
+git
+libgl1-mesa-dev
+ninja-build
+qt6-base-dev
+qt6-tools-dev
+unzip
+zip
