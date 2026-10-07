@@ -108,6 +108,7 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
     std::vector<std::wstring> parsedArguments;
     if (!splitArguments(arguments, &parsedArguments)) return false;
 
+    // Convert arguments to Utf8 for the Linux process API.
     std::vector<std::string> utf8Arguments;
     utf8Arguments.reserve(parsedArguments.size());
     for (const auto& argument : parsedArguments) {
@@ -116,12 +117,14 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
         utf8Arguments.push_back(std::move(utf8Argument));
     }
 
+    // Build null-terminated arguments required by execv.
     std::vector<char*> processArguments;
     processArguments.reserve(utf8Arguments.size() + 2);
     processArguments.push_back(const_cast<char*>(executable.c_str()));
     for (auto& argument : utf8Arguments) processArguments.push_back(argument.data());
     processArguments.push_back(nullptr);
 
+    // Use the pipe to report failures before execv replaces the child process.
     int statusPipe[2] = {-1, -1};
     if (pipe(statusPipe) == -1 || !setCloseOnExec(statusPipe[1])) {
         if (statusPipe[0] != -1) close(statusPipe[0]);
@@ -129,6 +132,7 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
         return false;
     }
 
+    // Fork a child process so the caller does not wait for the Modding API.
     const pid_t child = fork();
     if (child == -1) {
         close(statusPipe[0]);
@@ -138,10 +142,12 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
 
     if (child == 0) {
         close(statusPipe[0]);
+        // Fork again so the parent can wait for the child instead of the Modding API.
         const pid_t launcher = fork();
         if (launcher > 0) _exit(0);
 
         if (launcher == 0) {
+            // Start the Modding API from the game directory for relative paths.
             if (chdir(gameDirectory.c_str()) == 0)
                 execv(executable.c_str(), processArguments.data());
         }
@@ -152,6 +158,7 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
     }
 
     close(statusPipe[1]);
+    // Wait for the child to exit before checking launch status.
     int status;
     while (waitpid(child, &status, 0) == -1 && errno == EINTR) {
     }
@@ -162,6 +169,7 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
         bytesRead = read(statusPipe[0], &launchError, sizeof(launchError));
     } while (bytesRead == -1 && errno == EINTR);
     close(statusPipe[0]);
+    // An empty pipe means execv successfully replaced the child process.
     return bytesRead == 0;
 }
 #else
