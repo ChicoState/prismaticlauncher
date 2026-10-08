@@ -32,7 +32,7 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
-Set `VCPKG_ROOT` to your local vcpkg checkout, then configure and build the currently empty application harness:
+Set `VCPKG_ROOT` to your local vcpkg checkout, then configure and build the Nexus mod-list client and its tests:
 
 ```bash
 cmake --preset dev
@@ -40,7 +40,13 @@ cmake --build --preset dev
 ctest --preset dev --output-on-failure
 ```
 
-No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
+To make a live, read-only request to Nexus Mods, supply an API key only through the process environment. The probe fetches the ten most recently updated mods, then prints each mod's detailed metadata one at a time. It never prints the key:
+
+```bash
+NEXUS_API_KEY='your-api-key' ./build/dev/nexus-fetch-list
+```
+
+The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
 
 ### 3. Validate infrastructure in Docker
 

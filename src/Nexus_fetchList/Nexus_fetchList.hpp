@@ -14,12 +14,6 @@
 class QNetworkAccessManager;
 class QNetworkReply;
 
-enum class NexusModListPeriod {
-    Day,
-    Week,
-    Month,
-};
-
 struct NexusModSummary {
     qint64 id{};
     QString name;
@@ -63,10 +57,10 @@ class NexusModClient final : public QObject {
 public:
     explicit NexusModClient(QString apiKey, QObject* parent = nullptr);
 
-    // Fetches the legacy API's list of recently updated Stardew Valley mods.
-    // The current v3 API only exposes a five-item trending feed and individual
-    // metadata, so this endpoint is kept behind this module for future migration.
-    QNetworkReply* fetchModList(NexusModListPeriod period = NexusModListPeriod::Day);
+    // Fetches the legacy API's ten most recently updated Stardew Valley mods.
+    // The period-based updated.json endpoint returns only IDs and timestamps;
+    // this endpoint returns the complete summaries required by NexusModSummary.
+    QNetworkReply* fetchModList();
     QNetworkReply* fetchModDetails(qint64 modId);
 
     // Filters an already-fetched list by name, summary, or author.

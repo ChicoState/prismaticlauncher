@@ -7,8 +7,11 @@ class NexusFetchListTest final : public QObject {
 
 private slots:
     void filtersModListByNameSummaryAndAuthor();
-    void parsesAValidModListResponse();
+    void parsesAValidLatestUpdatedResponse();
+    void parsesAnUnavailableModWithoutAName();
     void parsesAValidModDetailsResponse();
+    void parsesModDetailsWithNumericStringTimestamps();
+    void parsesModDetailsWithIsoTimestamps();
     void rejectsMalformedModDetailsResponse();
 };
 
@@ -27,12 +30,12 @@ void NexusFetchListTest::filtersModListByNameSummaryAndAuthor()
     QCOMPARE(NexusModClient::searchMods(mods, u"missing").size(), 0);
 }
 
-void NexusFetchListTest::parsesAValidModListResponse()
+void NexusFetchListTest::parsesAValidLatestUpdatedResponse()
 {
     const QByteArray response = R"([{
         "mod_id": 456,
         "name": "List Entry",
-        "summary": "From the list endpoint",
+        "summary": "From the latest-updated endpoint",
         "version": "1.0.0",
         "author": "ExampleAuthor",
         "endorsement_count": 3
@@ -45,6 +48,25 @@ void NexusFetchListTest::parsesAValidModListResponse()
     QCOMPARE(mods->size(), 1);
     QCOMPARE(mods->front().id, 456);
     QCOMPARE(mods->front().pageUrl.path(), QStringLiteral("/stardewvalley/mods/456"));
+}
+
+void NexusFetchListTest::parsesAnUnavailableModWithoutAName()
+{
+    const QByteArray response = R"([{
+        "mod_id": 789,
+        "name": null,
+        "summary": null,
+        "version": null,
+        "author": null,
+        "endorsement_count": 0
+    }])";
+
+    QString error;
+    const auto mods = NexusModClient::parseModListResponse(response, &error);
+
+    QVERIFY2(mods.has_value(), qPrintable(error));
+    QCOMPARE(mods->size(), 1);
+    QCOMPARE(mods->front().name, QStringLiteral("Unavailable mod #789"));
 }
 
 void NexusFetchListTest::parsesAValidModDetailsResponse()
@@ -77,6 +99,40 @@ void NexusFetchListTest::parsesAValidModDetailsResponse()
     QCOMPARE(mod->updatedAt, QDateTime::fromSecsSinceEpoch(1700000100, Qt::UTC));
     QCOMPARE(mod->downloadCount, 42);
     QVERIFY(mod->available);
+}
+
+void NexusFetchListTest::parsesModDetailsWithNumericStringTimestamps()
+{
+    const QByteArray response = R"({
+        "mod_id": 124,
+        "name": "Timestamp Mod",
+        "created_time": "1700000000",
+        "updated_time": "1700000100"
+    })";
+
+    QString error;
+    const auto mod = NexusModClient::parseModDetailsResponse(response, &error);
+
+    QVERIFY2(mod.has_value(), qPrintable(error));
+    QCOMPARE(mod->createdAt, QDateTime::fromSecsSinceEpoch(1700000000, Qt::UTC));
+    QCOMPARE(mod->updatedAt, QDateTime::fromSecsSinceEpoch(1700000100, Qt::UTC));
+}
+
+void NexusFetchListTest::parsesModDetailsWithIsoTimestamps()
+{
+    const QByteArray response = R"({
+        "mod_id": 125,
+        "name": "ISO Timestamp Mod",
+        "created_time": "2023-11-14T22:13:20Z",
+        "updated_time": ""
+    })";
+
+    QString error;
+    const auto mod = NexusModClient::parseModDetailsResponse(response, &error);
+
+    QVERIFY2(mod.has_value(), qPrintable(error));
+    QCOMPARE(mod->createdAt, QDateTime::fromSecsSinceEpoch(1700000000, Qt::UTC));
+    QVERIFY(!mod->updatedAt.isValid());
 }
 
 void NexusFetchListTest::rejectsMalformedModDetailsResponse()

@@ -3,7 +3,6 @@
 #include <QNetworkAccessManager>
 #include <QNetworkReply>
 #include <QNetworkRequest>
-#include <QUrlQuery>
 
 #include <nlohmann/json.hpp>
 
@@ -34,18 +33,6 @@ bool readRequiredId(const Json& object, qint64* value, QString* error)
     return true;
 }
 
-bool readRequiredString(const Json& object, const char* key, QString* value, QString* error)
-{
-    const auto field = object.find(key);
-    if (field == object.end() || !field->is_string()) {
-        setError(error, QStringLiteral("Nexus response is missing a string %1.").arg(QString::fromUtf8(key)));
-        return false;
-    }
-
-    *value = QString::fromStdString(field->get<std::string>());
-    return true;
-}
-
 bool readOptionalString(const Json& object, const char* key, QString* value, QString* error)
 {
     const auto field = object.find(key);
@@ -69,6 +56,15 @@ bool readOptionalInteger(const Json& object, const char* key, qint64* value, QSt
         *value = 0;
         return true;
     }
+    if (field->is_string()) {
+        bool parsed{};
+        const QString text = QString::fromStdString(field->get<std::string>());
+        const qint64 numericValue = text.toLongLong(&parsed);
+        if (parsed) {
+            *value = numericValue;
+            return true;
+        }
+    }
     if (!field->is_number_integer() && !field->is_number_unsigned()) {
         setError(error, QStringLiteral("Nexus response has a non-integer %1.").arg(QString::fromUtf8(key)));
         return false;
@@ -76,6 +72,41 @@ bool readOptionalInteger(const Json& object, const char* key, qint64* value, QSt
 
     *value = field->get<qint64>();
     return true;
+}
+
+bool readOptionalTimestamp(const Json& object, const char* key, qint64* value, QString* error)
+{
+    const auto field = object.find(key);
+    if (field == object.end() || field->is_null()) {
+        *value = 0;
+        return true;
+    }
+    if (!field->is_string()) {
+        return readOptionalInteger(object, key, value, error);
+    }
+
+    const QString text = QString::fromStdString(field->get<std::string>());
+    if (text.isEmpty()) {
+        *value = 0;
+        return true;
+    }
+
+    bool parsed{};
+    const qint64 numericValue = text.toLongLong(&parsed);
+    if (parsed) {
+        *value = numericValue;
+        return true;
+    }
+
+    const QDateTime dateTime = QDateTime::fromString(text, Qt::ISODate);
+    if (dateTime.isValid()) {
+        *value = dateTime.toSecsSinceEpoch();
+        return true;
+    }
+
+    setError(error,
+             QStringLiteral("Nexus response has an invalid timestamp %1.").arg(QString::fromUtf8(key)));
+    return false;
 }
 
 bool readOptionalBoolean(const Json& object, const char* key, bool* value, QString* error)
@@ -97,12 +128,16 @@ bool readOptionalBoolean(const Json& object, const char* key, bool* value, QStri
 bool parseSummary(const Json& object, NexusModSummary* summary, QString* error)
 {
     if (!object.is_object() || !readRequiredId(object, &summary->id, error)
-        || !readRequiredString(object, "name", &summary->name, error)
+        || !readOptionalString(object, "name", &summary->name, error)
         || !readOptionalString(object, "summary", &summary->summary, error)
         || !readOptionalString(object, "version", &summary->version, error)
         || !readOptionalString(object, "author", &summary->author, error)
         || !readOptionalInteger(object, "endorsement_count", &summary->endorsementCount, error)) {
         return false;
+    }
+
+    if (summary->name.isEmpty()) {
+        summary->name = QStringLiteral("Unavailable mod #%1").arg(summary->id);
     }
 
     QString pictureUrl;
@@ -114,20 +149,6 @@ bool parseSummary(const Json& object, NexusModSummary* summary, QString* error)
         QUrl(QStringLiteral("https://www.nexusmods.com/stardewvalley/mods/%1").arg(summary->id));
     summary->pictureUrl = QUrl(pictureUrl);
     return true;
-}
-
-QString periodValue(NexusModListPeriod period)
-{
-    switch (period) {
-    case NexusModListPeriod::Day:
-        return QStringLiteral("1d");
-    case NexusModListPeriod::Week:
-        return QStringLiteral("1w");
-    case NexusModListPeriod::Month:
-        return QStringLiteral("1m");
-    }
-
-    return QStringLiteral("1d");
 }
 
 } // namespace
@@ -143,13 +164,9 @@ NexusModClient::NexusModClient(QString apiKey, QObject* parent)
     qRegisterMetaType<NexusApiError>();
 }
 
-QNetworkReply* NexusModClient::fetchModList(NexusModListPeriod period)
+QNetworkReply* NexusModClient::fetchModList()
 {
-    QUrl url(QString::fromLatin1(kApiBaseUrl) + QStringLiteral("updated.json"));
-    QUrlQuery query;
-    query.addQueryItem(QStringLiteral("period"), periodValue(period));
-    url.setQuery(query);
-
+    const QUrl url(QString::fromLatin1(kApiBaseUrl) + QStringLiteral("latest_updated.json"));
     QNetworkReply* reply = get(url);
     if (reply != nullptr) {
         connect(reply, &QNetworkReply::finished, this, [this, reply] { handleModListReply(reply); });
@@ -250,8 +267,8 @@ std::optional<NexusModDetails> NexusModClient::parseModDetailsResponse(const QBy
 
         qint64 createdTimestamp{};
         qint64 updatedTimestamp{};
-        if (!readOptionalInteger(document, "created_time", &createdTimestamp, error)
-            || !readOptionalInteger(document, "updated_time", &updatedTimestamp, error)
+        if (!readOptionalTimestamp(document, "created_time", &createdTimestamp, error)
+            || !readOptionalTimestamp(document, "updated_time", &updatedTimestamp, error)
             || !readOptionalInteger(document, "mod_downloads", &details.downloadCount, error)
             || !readOptionalInteger(document, "mod_unique_downloads", &details.uniqueDownloadCount, error)
             || !readOptionalBoolean(document, "adult_content", &details.adultContent, error)
