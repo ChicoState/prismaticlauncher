@@ -1,6 +1,8 @@
 # Prismatic Launcher
 
-Prismatic Launcher is planned as a cross-platform native desktop manager for Stardew Valley mods. The repository currently contains development infrastructure only; product UI, game discovery, mod installation, SQLite data access, and release packaging have not been implemented.
+Prismatic Launcher is a cross-platform native desktop manager for Stardew Valley mods. It currently
+contains an initial Nexus Mods archive downloader; product UI, game discovery, archive installation,
+SQLite data access, and release packaging have not been implemented.
 
 ## Repository map
 
@@ -12,7 +14,10 @@ Prismatic Launcher is planned as a cross-platform native desktop manager for Sta
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
 - `prismatic-launcher/documents/infrastructure_plan.md` — approved infrastructure decisions.
 - `.agents/skills/` — repository-specific agent skills.
-- `prismatic-launcher/src/` — product source belongs here.
+- `prismatic-launcher/src/` — product source, including the Nexus download client and CLI.
+- `tests/nexus/` — deterministic Nexus download-client tests; these do not contact Nexus Mods.
+- `docs/specs/nexus-mod-download.md` — scope and acceptance criteria for the Nexus integration.
+- `docs/decisions/0001-nexus-mod-download-transport.md` — Nexus API and transport rationale.
 - `packaging/` — not created yet; future product-owned portable-archive packaging belongs here.
 
 ## Getting Started
@@ -32,7 +37,7 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
-Set `VCPKG_ROOT` to your local vcpkg checkout, then configure and build the currently empty application harness:
+Set `VCPKG_ROOT` to your local vcpkg checkout, then configure and build the application:
 
 ```bash
 cmake --preset dev
@@ -40,9 +45,25 @@ cmake --build --preset dev
 ctest --preset dev --output-on-failure
 ```
 
-No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
+No `.env` file or local service is needed: the app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
 
-### 3. Validate infrastructure in Docker
+### 3. Download a Nexus Mods archive
+
+Create a user-owned API key in [Nexus Mods API settings](https://www.nexusmods.com/settings/api-keys).
+Do not put it in a file, command history, or source control. Supply it only as the
+`NEXUSMODS_API_KEY` environment variable when running the downloader:
+
+```bash
+NEXUSMODS_API_KEY='replace-with-your-key' ./build/dev/prismatic-nexus-download \
+  --game stardewvalley --mod 2400 --file 12345 --output ./downloads/mod.zip
+```
+
+The API key is not accepted as a CLI argument and the program never prints it. The `--download-key`
+and `--expires` options are available together for an `nxm` download key/expiry, which Nexus can
+require for non-premium downloads. The command only resolves and saves an archive; it does not
+inspect, extract, or install it.
+
+### 4. Validate infrastructure in Docker
 
 Build and run the Linux validation image:
 
@@ -54,7 +75,7 @@ docker run --rm --entrypoint bash prismaticlauncher-ci:local -lc ./scripts/verif
 
 The image is disposable and exposes no ports or volumes. Remove the local image when no longer needed with `docker image rm prismaticlauncher-ci:local`.
 
-### 4. Quality checks
+### 5. Quality checks
 
 ```bash
 ./scripts/format-check.sh
@@ -62,11 +83,11 @@ The image is disposable and exposes no ports or volumes. Remove the local image 
 ./scripts/verify-infrastructure.sh
 ```
 
-Until C++ product source and Qt Test targets exist, formatting and static-analysis scripts report that their work is deferred, and CTest verifies the configured harness only. Linux coverage generation starts automatically once product tests generate coverage data; the planned policy is a 60% line-coverage floor for tested core targets.
+Formatting and static-analysis scripts inspect the built Nexus downloader and its tests. Linux coverage generation enforces a 60% line-coverage floor for tested core targets.
 
 ## CI and releases
 
-Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. Windows and macOS runners configure and build the CMake harness; product targets will extend those validations.
+Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8, then configure, build, and discover the CTest suite.
 
 Tags matching `v*` start the guarded GitHub Release workflow. It intentionally fails before publishing until product-owned `packaging/` scripts exist and the protected `release` environment contains the required Apple notarization configuration. Future releases will publish portable archives: Windows ZIP, macOS ZIP, and Linux `tar.gz`, along with SHA-256 checksums.
 

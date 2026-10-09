@@ -43,6 +43,11 @@ jobs:
         os: [windows-2022, macos-14]
     steps:
       - uses: actions/checkout@v4
+      - name: Install Qt 6
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.8.*'
+          cache: true
       - name: Configure CMake
         run: cmake --preset dev
       - name: Build CMake targets
@@ -74,7 +79,7 @@ jobs:
         id: source-check
         shell: bash
         run: |
-          if [[ -d src ]] && find src -type f \
+          if [[ -d prismatic-launcher/src ]] && find prismatic-launcher/src -type f \
             \( -name '*.c' -o -name '*.cc' -o -name '*.cpp' -o -name '*.cxx' \) \
             -print -quit | grep -q .; then
             echo "has_source=true" >> "$GITHUB_OUTPUT"

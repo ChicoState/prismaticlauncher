@@ -29,4 +29,4 @@ PY
 cmake --preset dev
 ctest --preset dev --show-only=json-v1 >/dev/null
 
-echo 'Infrastructure configuration is valid. Application targets and tests are not created yet.'
+echo 'Infrastructure configuration and CTest discovery are valid.'

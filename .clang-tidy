@@ -7,5 +7,5 @@ Checks: >
   performance-*,
   readability-*
 WarningsAsErrors: ''
-HeaderFilterRegex: '^(src|tests)/'
+HeaderFilterRegex: '^(prismatic-launcher/src/nexus|tests/nexus)/'
 FormatStyle: file
