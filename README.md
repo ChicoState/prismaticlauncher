@@ -1,13 +1,14 @@
 # Prismatic Launcher
 
-Prismatic Launcher is planned as a cross-platform native desktop manager for Stardew Valley mods. The repository currently contains development infrastructure only; product UI, game discovery, mod installation, SQLite data access, and release packaging have not been implemented.
+Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its initial Qt Widgets UI follows `image.png`: an instance library with Add/Play/Edit and a detail view with Mods, Logs, Settings, and Modpacks. Automatic game discovery, mod installation, SQLite data access, and release packaging are not connected yet.
 
 ## Repository map
 
 - `CMakeLists.txt`, `CMakePresets.json` — C++20 build and CTest harness configuration.
 - `vcpkg.json`, `vcpkg-configuration.json` — Qt dependency manifest and immutable vcpkg baseline.
 - `scripts/` — Linux CI, quality, and infrastructure-smoke scripts.
-- `tests/infrastructure/` — reserved for infrastructure-only probes; product tests are not present.
+- `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, and launch errors.
+- `prismatic-launcher/ui/` — launcher UI, stylesheet, entrypoint, and embedded default config.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
 - `prismatic-launcher/documents/infrastructure_plan.md` — approved infrastructure decisions.
@@ -32,15 +33,42 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
-Set `VCPKG_ROOT` to your local vcpkg checkout, then configure and build the currently empty application harness:
+With Qt available on CMake's search path, configure, build, test, and run:
 
 ```bash
 cmake --preset dev
 cmake --build --preset dev
 ctest --preset dev --output-on-failure
+./build/dev/bin/prismatic-launch
 ```
 
-No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
+For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
+
+On Ubuntu with `qt6-base-dev`, CMake 3.28+, a C++ compiler, and Make installed, Ninja is optional with this alternate build:
+
+```bash
+cmake -S . -B build/local -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+cmake --build build/local -j
+ctest --test-dir build/local --output-on-failure
+./build/local/bin/prismatic-launch
+```
+
+Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; macOS builds produce `bin/prismatic-launch.app`. Development executables still require the Qt runtime.
+
+### Game path and UI scope
+
+`prismatic-launcher/ui/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
+
+Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
+
+```ini
+[game]
+directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
+```
+
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Add Instance creates session-only UI entries sharing that game path. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+
+No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
 ### 3. Validate infrastructure in Docker
 
@@ -62,11 +90,17 @@ The image is disposable and exposes no ports or volumes. Remove the local image 
 ./scripts/verify-infrastructure.sh
 ```
 
-Until C++ product source and Qt Test targets exist, formatting and static-analysis scripts report that their work is deferred, and CTest verifies the configured harness only. Linux coverage generation starts automatically once product tests generate coverage data; the planned policy is a 60% line-coverage floor for tested core targets.
+Formatting and analysis include `prismatic-launcher/ui` and `tests`. Static analysis needs a configured and built compilation database; set `PRISMATIC_BUILD_DIR=build/local` for an alternate build directory. Linux CI uses the coverage build when the dev build is unavailable; a fresh standalone analysis run configures and builds the dev preset automatically. The 60% coverage floor applies to tested core configuration logic (`LauncherConfig.cpp`); UI presentation and tests are outside this initial core threshold.
+
+To capture offscreen screenshots alongside the UI test run:
+
+```bash
+PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview QT_QPA_PLATFORM=offscreen ./build/dev/launcher-ui-tests
+```
 
 ## CI and releases
 
-Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. Windows and macOS runners configure and build the CMake harness; product targets will extend those validations.
+Pull requests run Linux Docker validation, infrastructure checks, formatting, static analysis, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8.3, build the launcher, and run the offscreen Qt tests.
 
 Tags matching `v*` start the guarded GitHub Release workflow. It intentionally fails before publishing until product-owned `packaging/` scripts exist and the protected `release` environment contains the required Apple notarization configuration. Future releases will publish portable archives: Windows ZIP, macOS ZIP, and Linux `tar.gz`, along with SHA-256 checksums.
 

@@ -8,5 +8,15 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-# Application targets intentionally do not exist yet. Product implementation
-# should add targets under src/ and register its tests with add_test().
+find_package(Qt6 REQUIRED COMPONENTS Widgets)
+qt_standard_project_setup()
+
+add_subdirectory(prismatic-launcher/ui)
+
+if(BUILD_TESTING)
+    find_package(Qt6 REQUIRED COMPONENTS Test)
+    qt_add_executable(launcher-ui-tests tests/ui/LauncherTests.cpp)
+    target_link_libraries(launcher-ui-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME launcher-ui COMMAND launcher-ui-tests)
+    set_tests_properties(launcher-ui PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()
