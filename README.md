@@ -8,7 +8,7 @@ Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its init
 - `vcpkg.json`, `vcpkg-configuration.json` — Qt dependency manifest and immutable vcpkg baseline.
 - `scripts/` — Linux CI, quality, and infrastructure-smoke scripts.
 - `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, and launch errors.
-- `prismatic-launcher/ui/` — launcher UI, stylesheet, entrypoint, and embedded default config.
+- `prismatic-launcher/src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
 - `prismatic-launcher/documents/infrastructure_plan.md` — approved infrastructure decisions.
@@ -57,7 +57,7 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 ### Game path and UI scope
 
-`prismatic-launcher/ui/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
+`prismatic-launcher/src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
 
 Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
@@ -90,7 +90,7 @@ The image is disposable and exposes no ports or volumes. Remove the local image 
 ./scripts/verify-infrastructure.sh
 ```
 
-Formatting and analysis include `prismatic-launcher/ui` and `tests`. Static analysis needs a configured and built compilation database; set `PRISMATIC_BUILD_DIR=build/local` for an alternate build directory. Linux CI uses the coverage build when the dev build is unavailable; a fresh standalone analysis run configures and builds the dev preset automatically. The 60% coverage floor applies to tested core configuration logic (`LauncherConfig.cpp`); UI presentation and tests are outside this initial core threshold.
+Formatting and analysis include `prismatic-launcher/src/qt` and `tests`. Static analysis needs a configured and built compilation database; set `PRISMATIC_BUILD_DIR=build/local` for an alternate build directory. Linux CI uses the coverage build when the dev build is unavailable; a fresh standalone analysis run configures and builds the dev preset automatically. The 60% coverage floor applies to tested core configuration logic (`LauncherConfig.cpp`); UI presentation and tests are outside this initial core threshold.
 
 To capture offscreen screenshots alongside the UI test run:
 

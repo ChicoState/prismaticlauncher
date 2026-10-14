@@ -11,7 +11,7 @@ include(CTest)
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()
 
-add_subdirectory(prismatic-launcher/ui)
+add_subdirectory(prismatic-launcher/src/qt)
 
 if(BUILD_TESTING)
     find_package(Qt6 REQUIRED COMPONENTS Test)
