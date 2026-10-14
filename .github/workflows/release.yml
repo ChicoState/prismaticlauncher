@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-24.04
     environment: release
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Require future product packaging configuration
         run: |
           test -f packaging/CMakeLists.txt || {
@@ -58,7 +58,7 @@ jobs:
             os: ubuntu-24.04
             archive: tar.gz
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build, test, package, and sign
         run: packaging/release-${{ matrix.name }}.${{ runner.os == 'Windows' && 'ps1' || 'sh' }}
       - uses: actions/upload-artifact@v4
