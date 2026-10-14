@@ -15,11 +15,12 @@ include(CTest)
 find_package(QT NAMES Qt6 Qt5 REQUIRED COMPONENTS Widgets)
 find_package(Qt${QT_VERSION_MAJOR} REQUIRED COMPONENTS Widgets)
 
-set(PROJECT_SOURCES
-        prismatic-launcher/src/main.cpp
-        prismatic-launcher/src/qt/MainWindow.cpp
-        prismatic-launcher/src/qt/MainWindow.h
-        prismatic-launcher/src/qt/MainWindow.ui
+file(GLOB_RECURSE PROJECT_SOURCES
+    CONFIGURE_DEPENDS
+    "${CMAKE_CURRENT_SOURCE_DIR}/prismatic-launcher/src/*.cpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/prismatic-launcher/src/*.h"
+    "${CMAKE_CURRENT_SOURCE_DIR}/prismatic-launcher/src/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/prismatic-launcher/src/*.ui"
 )
 
 if(${QT_VERSION_MAJOR} GREATER_EQUAL 6)
