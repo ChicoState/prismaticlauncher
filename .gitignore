@@ -7,6 +7,9 @@ CTestTestfile.cmake
 Testing/
 compile_commands.json
 
+#qtcreator user settings
+/.qtcreator/
+
 # Coverage, static-analysis, and test reports
 /coverage/
 *.gcda
