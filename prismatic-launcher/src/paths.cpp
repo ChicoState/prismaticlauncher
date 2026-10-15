@@ -14,21 +14,13 @@ Paths::Paths(std::filesystem::path gameDirectory, std::filesystem::path dataDire
     }
 }
 
-const std::filesystem::path& Paths::gameDirectory() const noexcept {
-    return gameDirectory_;
-}
+const std::filesystem::path& Paths::gameDirectory() const noexcept { return gameDirectory_; }
 
-const std::filesystem::path& Paths::dataDirectory() const noexcept {
-    return dataDirectory_;
-}
+const std::filesystem::path& Paths::dataDirectory() const noexcept { return dataDirectory_; }
 
-const std::filesystem::path& Paths::configDirectory() const noexcept {
-    return configDirectory_;
-}
+const std::filesystem::path& Paths::configDirectory() const noexcept { return configDirectory_; }
 
-std::filesystem::path Paths::modsDirectory() const {
-    return gameDirectory_ / "Mods";
-}
+std::filesystem::path Paths::modsDirectory() const { return gameDirectory_ / "Mods"; }
 
 std::filesystem::path Paths::smapiExecutable() const {
 #ifdef _WIN32
