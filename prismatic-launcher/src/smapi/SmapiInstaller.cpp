@@ -85,9 +85,7 @@ InstallResult SmapiInstaller::install(const QString& gameDirectory,
 
     // Command arguments
     QStringList arguments = command->arguments;
-    arguments << "--no-prompt"
-              << "--install"
-              << "--game-path" << gameDir.absolutePath();
+    arguments << "--no-prompt" << "--install" << "--game-path" << gameDir.absolutePath();
 
     QProcess process;
     process.setWorkingDirectory(QDir(installerPath).absolutePath());

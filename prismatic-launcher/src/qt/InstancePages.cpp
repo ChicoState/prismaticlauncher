@@ -129,7 +129,8 @@ QWidget* LauncherWindow::createLogsPage() {
         auto cursor = logs_->textCursor();
         cursor.movePosition(QTextCursor::Start);
         logs_->setTextCursor(cursor);
-        if (!query.isEmpty()) logs_->find(query);
+        if (!query.isEmpty())
+            logs_->find(query);
     });
     return page;
 }
@@ -176,7 +177,8 @@ QWidget* LauncherWindow::createSettingsPage() {
     connect(browse, &QPushButton::clicked, this, [this] {
         const auto directory = QFileDialog::getExistingDirectory(
             this, "Select Stardew Valley folder", gamePath_->text());
-        if (!directory.isEmpty()) gamePath_->setText(directory);
+        if (!directory.isEmpty())
+            gamePath_->setText(directory);
     });
     connect(save, &QPushButton::clicked, this, [this] {
         if (!config_.saveGameDirectory(gamePath_->text())) {

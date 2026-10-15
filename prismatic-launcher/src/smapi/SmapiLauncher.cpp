@@ -24,8 +24,10 @@ bool splitArguments(const std::wstring& arguments, std::vector<std::wstring>* re
     // Loop through each char in arguments.
     for (std::size_t index = 0; index < arguments.size();) {
         // Skip over whitespaces. Stop here if index reaches end of arguments.
-        while (index < arguments.size() && std::iswspace(arguments[index])) ++index;
-        if (index == arguments.size()) break;
+        while (index < arguments.size() && std::iswspace(arguments[index]))
+            ++index;
+        if (index == arguments.size())
+            break;
 
         std::wstring argument;
         wchar_t quote = L'\0';
@@ -49,7 +51,8 @@ bool splitArguments(const std::wstring& arguments, std::vector<std::wstring>* re
             }
         }
 
-        if (quote != L'\0') return false;
+        if (quote != L'\0')
+            return false;
         result->push_back(std::move(argument));
     }
 
@@ -68,7 +71,8 @@ static bool setCloseOnExec(const int descriptor) {
 static bool toUtf8(const std::wstring& input, std::string* output) {
     for (const wchar_t character : input) {
         const auto codePoint = static_cast<unsigned int>(character);
-        if (codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF)) return false;
+        if (codePoint > 0x10FFFF || (codePoint >= 0xD800 && codePoint <= 0xDFFF))
+            return false;
 
         if (codePoint <= 0x7F) {
             output->push_back(static_cast<char>(codePoint));
@@ -102,18 +106,21 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
     // Only proceed if Modding API is found.
     const auto executable = gameDirectory / "StardewModdingAPI";
     std::error_code error;
-    if (!std::filesystem::is_regular_file(executable, error) || error) return false;
+    if (!std::filesystem::is_regular_file(executable, error) || error)
+        return false;
 
     // Only proceed if arguments are valid.
     std::vector<std::wstring> parsedArguments;
-    if (!splitArguments(arguments, &parsedArguments)) return false;
+    if (!splitArguments(arguments, &parsedArguments))
+        return false;
 
     // Convert arguments to Utf8 for the Linux process API.
     std::vector<std::string> utf8Arguments;
     utf8Arguments.reserve(parsedArguments.size());
     for (const auto& argument : parsedArguments) {
         std::string utf8Argument;
-        if (!toUtf8(argument, &utf8Argument)) return false;
+        if (!toUtf8(argument, &utf8Argument))
+            return false;
         utf8Arguments.push_back(std::move(utf8Argument));
     }
 
@@ -121,14 +128,17 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
     std::vector<char*> processArguments;
     processArguments.reserve(utf8Arguments.size() + 2);
     processArguments.push_back(const_cast<char*>(executable.c_str()));
-    for (auto& argument : utf8Arguments) processArguments.push_back(argument.data());
+    for (auto& argument : utf8Arguments)
+        processArguments.push_back(argument.data());
     processArguments.push_back(nullptr);
 
     // Use the pipe to report failures before execv replaces the child process.
     int statusPipe[2] = {-1, -1};
     if (pipe(statusPipe) == -1 || !setCloseOnExec(statusPipe[1])) {
-        if (statusPipe[0] != -1) close(statusPipe[0]);
-        if (statusPipe[1] != -1) close(statusPipe[1]);
+        if (statusPipe[0] != -1)
+            close(statusPipe[0]);
+        if (statusPipe[1] != -1)
+            close(statusPipe[1]);
         return false;
     }
 
@@ -144,7 +154,8 @@ bool SmapiLauncher::launch(const std::filesystem::path& gameDirectory,
         close(statusPipe[0]);
         // Fork again so the parent can wait for the child instead of the Modding API.
         const pid_t launcher = fork();
-        if (launcher > 0) _exit(0);
+        if (launcher > 0)
+            _exit(0);
 
         if (launcher == 0) {
             // Start the Modding API from the game directory for relative paths.

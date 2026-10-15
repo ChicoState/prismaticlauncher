@@ -5,7 +5,8 @@
 #include <QSettings>
 #include <utility>
 
-LauncherConfig::LauncherConfig(QString filePath) : filePath_(std::move(filePath)) {}
+LauncherConfig::LauncherConfig(QString filePath) : filePath_(std::move(filePath)) {
+}
 
 QString LauncherConfig::expandHome(const QString& path) {
     return path.startsWith("~/") ? QDir::homePath() + path.mid(1) : path;
@@ -19,12 +20,16 @@ QString LauncherConfig::gameDirectory() const {
     return QDir::cleanPath(QDir::isAbsolutePath(path) ? path : fallback);
 }
 
-QString LauncherConfig::filePath() const { return filePath_; }
+QString LauncherConfig::filePath() const {
+    return filePath_;
+}
 
 bool LauncherConfig::saveGameDirectory(const QString& directory) {
     const auto path = expandHome(directory.trimmed());
-    if (path.isEmpty() || !QDir::isAbsolutePath(path)) return false;
-    if (!QDir().mkpath(QFileInfo(filePath_).absolutePath())) return false;
+    if (path.isEmpty() || !QDir::isAbsolutePath(path))
+        return false;
+    if (!QDir().mkpath(QFileInfo(filePath_).absolutePath()))
+        return false;
     QSettings settings(filePath_, QSettings::IniFormat);
     settings.setValue("game/directory", QDir::cleanPath(path));
     settings.sync();

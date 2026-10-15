@@ -62,7 +62,8 @@ class LauncherTests : public QObject {
             }
         });
         for (auto* button : window.findChildren<QPushButton*>()) {
-            if (button->text() == "+  Add instance") button->click();
+            if (button->text() == "+  Add instance")
+                button->click();
         }
         auto* instances = window.findChild<QListWidget*>("instances");
         QCOMPARE(instances->count(), 2);
@@ -114,7 +115,8 @@ class LauncherTests : public QObject {
             }
         });
         for (auto* button : window.findChildren<QPushButton*>()) {
-            if (button->text() == "▶  Play") button->click();
+            if (button->text() == "▶  Play")
+                button->click();
         }
         QVERIFY(warningShown);
     }

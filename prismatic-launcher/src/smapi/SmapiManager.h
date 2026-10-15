@@ -8,7 +8,12 @@
 #include "SmapiInstaller.h"
 #include "SmapiLauncher.h"
 
-enum class LaunchStatus { Success, SmapiNotInstalled, LaunchFailed, UnsupportedPlatform };
+enum class LaunchStatus {
+    Success,
+    SmapiNotInstalled,
+    LaunchFailed,
+    UnsupportedPlatform
+};
 
 /*
  * Describes the result of launching SMAPI
@@ -20,7 +25,9 @@ struct LaunchResult {
     /*
      * Returns if the launch has succeeded
      */
-    [[nodiscard]] bool succeeded() const { return status == LaunchStatus::Success; }
+    [[nodiscard]] bool succeeded() const {
+        return status == LaunchStatus::Success;
+    }
 };
 
 /*

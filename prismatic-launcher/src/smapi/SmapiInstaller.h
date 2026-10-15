@@ -33,7 +33,9 @@ struct InstallResult {
      * Compares the status of the installation to success
      * @return if the installation succeeded
      */
-    [[nodiscard]] bool succeeded() const { return status == InstallStatus::Success; }
+    [[nodiscard]] bool succeeded() const {
+        return status == InstallStatus::Success;
+    }
 };
 
 /*

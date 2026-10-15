@@ -3,3 +3,12 @@ IndentWidth: 4
 ColumnLimit: 100
 PointerAlignment: Left
 SortIncludes: CaseSensitive
+
+# Keep functions and enums expanded
+AllowShortFunctionsOnASingleLine: None
+AllowShortEnumsOnASingleLine: false
+AllowShortIfStatementsOnASingleLine: Never
+AllowShortLoopsOnASingleLine: false
+
+# Keep braces consistent
+BreakBeforeBraces: Attach

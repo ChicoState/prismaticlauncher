@@ -152,7 +152,8 @@ void LauncherWindow::filterInstances(const QString& query) {
     for (int index = 0; index < instances_->count(); ++index) {
         auto* item = instances_->item(index);
         item->setHidden(!item->text().contains(query, Qt::CaseInsensitive));
-        if (!item->isHidden()) ++visible;
+        if (!item->isHidden())
+            ++visible;
     }
     instanceCount_->setText(visible == 0 ? "NO MATCHING INSTANCES"
                                          : QString("%1 INSTANCE(S)").arg(visible));
@@ -182,7 +183,8 @@ void LauncherWindow::addInstance() {
     connect(&name, &QLineEdit::textChanged, &dialog, [&buttons](const QString& value) {
         buttons.button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
     });
-    if (dialog.exec() != QDialog::Accepted) return;
+    if (dialog.exec() != QDialog::Accepted)
+        return;
     const bool modded = mode.currentIndex() == 1;
     auto* item = new QListWidgetItem(
         instanceIcon(), name.text().trimmed() + (modded ? "\nModded" : "\nVanilla"), instances_);

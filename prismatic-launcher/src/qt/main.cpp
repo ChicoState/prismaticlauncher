@@ -22,7 +22,8 @@ int main(int argc, char* argv[]) {
     parser.process(app);
 
     QFile stylesheet(":/ui/style.qss");
-    if (stylesheet.open(QIODevice::ReadOnly)) app.setStyleSheet(stylesheet.readAll());
+    if (stylesheet.open(QIODevice::ReadOnly))
+        app.setStyleSheet(stylesheet.readAll());
 
     const auto configFile =
         parser.isSet("config")
