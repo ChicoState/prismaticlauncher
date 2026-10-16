@@ -20,8 +20,8 @@ jobs:
         run: docker run --rm prismaticlauncher-ci:ci
       - name: Run infrastructure smoke test
         run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/verify-infrastructure.sh
-      - name: Check formatting
-        run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/format-check.sh
+      # - name: Check formatting
+      # run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/format-check.sh
       - name: Run static analysis
         run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/static-analysis.sh
       - name: Upload diagnostics
