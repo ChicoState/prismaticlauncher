@@ -7,5 +7,5 @@ Checks: >
   performance-*,
   readability-*
 WarningsAsErrors: ''
-HeaderFilterRegex: '^(src|tests)/'
+HeaderFilterRegex: '(^|/)(src|prismatic-launcher/ui|tests)/'
 FormatStyle: file
