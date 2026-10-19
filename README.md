@@ -8,12 +8,12 @@ Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its init
 - `vcpkg.json`, `vcpkg-configuration.json` — Qt dependency manifest and immutable vcpkg baseline.
 - `scripts/` — Linux CI, quality, and infrastructure-smoke scripts.
 - `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, and launch errors.
-- `prismatic-launcher/src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
+- `src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
-- `prismatic-launcher/documents/infrastructure_plan.md` — approved infrastructure decisions.
+- `documents/infrastructure_plan.md` — approved infrastructure decisions.
 - `.agents/skills/` — repository-specific agent skills.
-- `prismatic-launcher/src/` — product source belongs here.
+- `src/` — product source belongs here.
 - `packaging/` — not created yet; future product-owned portable-archive packaging belongs here.
 
 ## Getting Started
