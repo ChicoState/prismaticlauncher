@@ -6,9 +6,12 @@ QLabel { background: transparent; }
 QLabel#brandMark { color: #8bd6b8; font-size: 32px; }
 QLabel#brand { font-size: 18px; font-weight: 700; letter-spacing: 3px; }
 QLabel#heading { font-size: 32px; font-weight: 700; }
-QLabel#sectionTitle { font-size: 22px; font-weight: 600; }
-QLabel#eyebrow { color: #aabbb5; font-size: 11px; font-weight: 600; letter-spacing: 2px; }
-QLabel#muted { color: #adbbb9; font-size: 13px; }
+QLabel#sectionTitle, QLabel#modsTitle, QLabel#logsTitle, QLabel#settingsTitle,
+QLabel#smapiTitle, QLabel#modpacksTitle { font-size: 22px; font-weight: 600; }
+QLabel#eyebrow, QLabel#modsPreview { color: #aabbb5; font-size: 11px; font-weight: 600; letter-spacing: 2px; }
+QLabel#muted, QLabel#mutedSidebar, QLabel#modsDescription, QLabel#logsDescription,
+QLabel#settingsDescription, QLabel#settingsNote, QLabel#smapiDescription,
+QLabel#modpacksDescription, QLabel#emptyDescription { color: #adbbb9; font-size: 13px; }
 QLabel#emptyIcon { color: #8bd6b8; font-size: 64px; }
 QLabel#emptyTitle { font-size: 18px; font-weight: 600; }
 QPushButton { background: #273239; border: 1px solid #3b4a52; border-radius: 6px;

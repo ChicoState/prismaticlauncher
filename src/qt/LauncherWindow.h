@@ -3,12 +3,15 @@
 #include <memory>
 
 #include <QMainWindow>
+#include <QPointer>
 
 #include "LauncherConfig.h"
 
 namespace Ui {
 class LauncherWindow;
 }
+
+class InstanceWindow;
 
 class LauncherWindow : public QMainWindow {
     Q_OBJECT
@@ -21,11 +24,11 @@ class LauncherWindow : public QMainWindow {
     void connectSignals();
     void populateInstances();
     void addInstance();
-    void openInstance(int tab = 0);
+    void openInstanceWindow(int tab = 0);
     void launchGame();
-    void refreshPathStatus();
     void filterInstances(const QString& query);
 
     LauncherConfig config_;
+    QPointer<InstanceWindow> instanceWindow_;
     std::unique_ptr<Ui::LauncherWindow> ui_;
 };

@@ -1,5 +1,6 @@
 qt_add_library(launcher-ui STATIC
     LauncherConfig.cpp LauncherConfig.h
+    InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
     AddInstanceDialog.ui
 )
