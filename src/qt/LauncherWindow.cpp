@@ -1,23 +1,20 @@
 #include "LauncherWindow.h"
 
+#include "ui_AddInstanceDialog.h"
+#include "ui_LauncherWindow.h"
+
 #include <QComboBox>
 #include <QDialog>
 #include <QDialogButtonBox>
-#include <QFile>
+#include <QFileDialog>
 #include <QFileInfo>
-#include <QFormLayout>
-#include <QHBoxLayout>
-#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPainter>
-#include <QPlainTextEdit>
 #include <QProcess>
 #include <QPushButton>
-#include <QStackedWidget>
-#include <QStatusBar>
-#include <QVBoxLayout>
+#include <QTextCursor>
 
 namespace {
 QIcon instanceIcon() {
@@ -43,180 +40,137 @@ QIcon instanceIcon() {
 }  // namespace
 
 LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
-    : QMainWindow(parent), config_(configFile) {
-    setWindowTitle("Prismatic Launcher");
+    : QMainWindow(parent), config_(configFile), ui_(std::make_unique<Ui::LauncherWindow>()) {
+    ui_->setupUi(this);
     resize(1120, 760);
-    setMinimumSize(820, 600);
     setWindowIcon(instanceIcon());
-    auto* root = new QWidget(this);
-    auto* layout = new QVBoxLayout(root);
-    layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
-
-    auto* header = new QWidget;
-    header->setObjectName("header");
-    auto* bar = new QHBoxLayout(header);
-    bar->setContentsMargins(24, 16, 24, 16);
-    auto* mark = new QLabel("◈");
-    mark->setObjectName("brandMark");
-    auto* brand = new QLabel("PRISMATIC");
-    brand->setObjectName("brand");
-    bar->addWidget(mark);
-    bar->addWidget(brand);
-    bar->addStretch();
-    auto* settings = new QPushButton("Settings");
-    settings->setAccessibleName("Launcher settings");
-    bar->addWidget(settings);
-    layout->addWidget(header);
-
-    pages_ = new QStackedWidget;
-    pages_->setObjectName("pages");
-    pages_->addWidget(createLibrary());
-    pages_->addWidget(createDetails());
-    layout->addWidget(pages_, 1);
-    setCentralWidget(root);
     statusBar()->showMessage("Local launcher  /  UI preview");
-    connect(settings, &QPushButton::clicked, this, [this] { openInstance(2); });
+
+    ui_->configLocation->setText("Configuration file: " + config_.filePath());
+    ui_->logs->setPlainText("Prismatic Launcher ready.\nConfiguration: " + config_.filePath());
+
+    connectSignals();
+    populateInstances();
     refreshPathStatus();
 }
 
-QWidget* LauncherWindow::createLibrary() {
-    auto* page = new QWidget;
-    auto* layout = new QVBoxLayout(page);
-    layout->setContentsMargins(32, 32, 32, 24);
-    layout->setSpacing(16);
-    auto* eyebrow = new QLabel("YOUR COLLECTION");
-    eyebrow->setObjectName("eyebrow");
-    layout->addWidget(eyebrow);
-    auto* heading = new QLabel("Make the valley yours.");
-    heading->setObjectName("heading");
-    layout->addWidget(heading);
-    auto* description = new QLabel("Your Stardew Valley instances, all in one place.");
-    description->setObjectName("muted");
-    layout->addWidget(description);
+LauncherWindow::~LauncherWindow() = default;
 
-    auto* toolbar = new QHBoxLayout;
-    auto* add = new QPushButton("+  Add instance");
-    add->setObjectName("primary");
-    auto* play = new QPushButton("▶  Play");
-    auto* edit = new QPushButton("Edit instance");
-    edit->setObjectName("editInstance");
-    toolbar->addWidget(add);
-    toolbar->addWidget(play);
-    toolbar->addWidget(edit);
-    toolbar->addStretch();
-    search_ = new QLineEdit;
-    search_->setObjectName("instanceSearch");
-    search_->setPlaceholderText("Search instances…");
-    search_->setAccessibleName("Search instances");
-    search_->setMaximumWidth(240);
-    toolbar->addWidget(search_);
-    layout->addLayout(toolbar);
+void LauncherWindow::connectSignals() {
+    connect(ui_->headerSettings, &QPushButton::clicked, this,
+            [this] { openInstance(2); });
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
+            &LauncherWindow::filterInstances);
+    connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
+    connect(ui_->editInstance, &QPushButton::clicked, this,
+            [this] { openInstance(); });
+    connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
+    connect(ui_->playDetailInstance, &QPushButton::clicked, this,
+            &LauncherWindow::launchGame);
+    connect(ui_->backToLibrary, &QPushButton::clicked, this,
+            [this] { ui_->pages->setCurrentIndex(0); });
+    connect(ui_->instances, &QListWidget::itemActivated, this,
+            [this] { openInstance(); });
+    connect(ui_->instances, &QListWidget::itemDoubleClicked, this,
+            [this] { openInstance(); });
+    connect(ui_->logFilter, &QLineEdit::textChanged, this, [this](const QString& query) {
+        auto cursor = ui_->logs->textCursor();
+        cursor.movePosition(QTextCursor::Start);
+        ui_->logs->setTextCursor(cursor);
+        if (!query.isEmpty()) ui_->logs->find(query);
+    });
+    connect(ui_->browseGamePath, &QPushButton::clicked, this, [this] {
+        const auto directory = QFileDialog::getExistingDirectory(
+            this, "Select Stardew Valley folder", ui_->gamePath->text());
+        if (!directory.isEmpty()) ui_->gamePath->setText(directory);
+    });
+    connect(ui_->savePath, &QPushButton::clicked, this, [this] {
+        if (!config_.saveGameDirectory(ui_->gamePath->text())) {
+            ui_->pathStatus->setText(
+                "Could not save. Use an absolute path and a writable config location.");
+            return;
+        }
+        refreshPathStatus();
+        ui_->logs->appendPlainText("Saved game directory: " + config_.gameDirectory());
+        statusBar()->showMessage("Game path saved.");
+    });
+    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (auto* item = ui_->instances->currentItem()) {
+            item->setData(Qt::UserRole + 1, index == 1);
+            item->setText(item->data(Qt::UserRole).toString() +
+                          (index == 1 ? "\nModded" : "\nVanilla"));
+        }
+    });
+}
 
-    instanceCount_ = new QLabel("01 INSTANCE");
-    instanceCount_->setObjectName("eyebrow");
-    layout->addWidget(instanceCount_);
-    instances_ = new QListWidget;
-    instances_->setObjectName("instances");
-    instances_->setAccessibleName("Game instances. Double click to open details.");
-    instances_->setViewMode(QListView::IconMode);
-    instances_->setMovement(QListView::Static);
-    instances_->setResizeMode(QListView::Adjust);
-    instances_->setWordWrap(true);
-    instances_->setTextElideMode(Qt::ElideNone);
-    instances_->setIconSize(QSize(144, 144));
-    instances_->setGridSize(QSize(208, 224));
-    instances_->setSpacing(12);
-    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", instances_);
+void LauncherWindow::populateInstances() {
+    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
     item->setSizeHint(QSize(192, 224));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
-    instances_->setCurrentItem(item);
-    layout->addWidget(instances_, 1);
-    auto* hint =
-        new QLabel("A fresh start, or a new adventure. Double-click an instance to explore.");
-    hint->setObjectName("muted");
-    layout->addWidget(hint);
-
-    connect(search_, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
-    connect(add, &QPushButton::clicked, this, &LauncherWindow::addInstance);
-    connect(edit, &QPushButton::clicked, this, [this] { openInstance(); });
-    connect(play, &QPushButton::clicked, this, &LauncherWindow::launchGame);
-    connect(instances_, &QListWidget::itemActivated, this, [this] { openInstance(); });
-    connect(instances_, &QListWidget::itemDoubleClicked, this, [this] { openInstance(); });
-    return page;
+    ui_->instances->setCurrentItem(item);
 }
 
 void LauncherWindow::filterInstances(const QString& query) {
     int visible = 0;
-    for (int index = 0; index < instances_->count(); ++index) {
-        auto* item = instances_->item(index);
+    for (int index = 0; index < ui_->instances->count(); ++index) {
+        auto* item = ui_->instances->item(index);
         item->setHidden(!item->text().contains(query, Qt::CaseInsensitive));
         if (!item->isHidden()) ++visible;
     }
-    instanceCount_->setText(visible == 0 ? "NO MATCHING INSTANCES"
-                                         : QString("%1 INSTANCE(S)").arg(visible));
 }
 
 void LauncherWindow::addInstance() {
     QDialog dialog(this);
-    dialog.setWindowTitle("Add instance");
-    dialog.setMinimumWidth(420);
-    QFormLayout form(&dialog);
-    QLineEdit name("My Stardew Valley");
-    name.setMaxLength(64);
-    QComboBox mode;
-    mode.addItems({"Vanilla", "Modded (requires installed SMAPI)"});
-    QLabel note(
-        "Instances are session-only UI entries and share the configured game folder.\n"
-        "Creating one does not copy game files or install SMAPI.");
-    note.setWordWrap(true);
-    form.addRow("Name", &name);
-    form.addRow("Launch mode", &mode);
-    form.addRow(&note);
-    QDialogButtonBox buttons(QDialogButtonBox::Ok | QDialogButtonBox::Cancel);
-    buttons.button(QDialogButtonBox::Ok)->setText("Create instance");
-    form.addRow(&buttons);
-    connect(&buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
-    connect(&buttons, &QDialogButtonBox::rejected, &dialog, &QDialog::reject);
-    connect(&name, &QLineEdit::textChanged, &dialog, [&buttons](const QString& value) {
-        buttons.button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
-    });
+    Ui::AddInstanceDialog dialogUi;
+    dialogUi.setupUi(&dialog);
+    dialogUi.buttons->button(QDialogButtonBox::Ok)->setText("Create instance");
+    dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
+        !dialogUi.name->text().trimmed().isEmpty());
+    connect(dialogUi.name, &QLineEdit::textChanged, &dialog,
+            [&dialogUi](const QString& value) {
+                dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
+                    !value.trimmed().isEmpty());
+            });
+
     if (dialog.exec() != QDialog::Accepted) return;
-    const bool modded = mode.currentIndex() == 1;
+
+    const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
-        instanceIcon(), name.text().trimmed() + (modded ? "\nModded" : "\nVanilla"), instances_);
+        instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
+        ui_->instances);
     item->setSizeHint(QSize(192, 224));
-    item->setData(Qt::UserRole, name.text().trimmed());
+    item->setData(Qt::UserRole, dialogUi.name->text().trimmed());
     item->setData(Qt::UserRole + 1, modded);
-    search_->clear();
+    ui_->instanceSearch->clear();
     filterInstances({});
-    instances_->setCurrentItem(item);
+    ui_->instances->setCurrentItem(item);
     openInstance();
 }
 
 void LauncherWindow::openInstance(int tab) {
-    auto* item = instances_->currentItem();
+    auto* item = ui_->instances->currentItem();
     if (!item || item->isHidden()) {
         statusBar()->showMessage("Select an instance first.");
         return;
     }
-    detailTitle_->setText(item->data(Qt::UserRole).toString());
-    launchMode_->setCurrentIndex(item->data(Qt::UserRole + 1).toBool() ? 1 : 0);
-    navigation_->setCurrentRow(tab);
-    pages_->setCurrentIndex(1);
+    ui_->detailTitle->setText(item->data(Qt::UserRole).toString());
+    ui_->launchMode->setCurrentIndex(item->data(Qt::UserRole + 1).toBool() ? 1 : 0);
+    ui_->navigation->setCurrentRow(tab);
+    ui_->pages->setCurrentIndex(1);
 }
 
 void LauncherWindow::refreshPathStatus() {
     const auto directory = config_.gameDirectory();
-    gamePath_->setText(directory);
-    pathStatus_->setText(QFileInfo(directory).isDir()
-                             ? "Game folder exists. Play checks the selected executable."
-                             : "Game folder not found. Set your installation path in Settings.");
+    ui_->gamePath->setText(directory);
+    ui_->pathStatus->setText(
+        QFileInfo(directory).isDir()
+            ? "Game folder exists. Play checks the selected executable."
+            : "Game folder not found. Set your installation path in Settings.");
 }
 
 void LauncherWindow::launchGame() {
-    auto* item = instances_->currentItem();
+    auto* item = ui_->instances->currentItem();
     if (!item || item->isHidden()) {
         statusBar()->showMessage("Select an instance first.");
         return;
@@ -234,7 +188,7 @@ void LauncherWindow::launchGame() {
     const auto executable = directory + "/" + binary;
     if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) {
         const auto message = "Executable not found or not runnable:\n" + executable;
-        logs_->appendPlainText(message);
+        ui_->logs->appendPlainText(message);
         QMessageBox::warning(this, "Unable to launch",
                              message + "\n\nCheck your game path in Settings.");
         return;
@@ -244,10 +198,10 @@ void LauncherWindow::launchGame() {
     process.setProgram(executable);
     process.setWorkingDirectory(directory);
     if (!process.startDetached()) {
-        logs_->appendPlainText("Launch failed: " + process.errorString());
+        ui_->logs->appendPlainText("Launch failed: " + process.errorString());
         QMessageBox::warning(this, "Unable to launch", process.errorString());
         return;
     }
-    logs_->appendPlainText("Started " + executable);
+    ui_->logs->appendPlainText("Started " + executable);
     statusBar()->showMessage("Game launched.");
 }
