@@ -51,7 +51,7 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->headerSettings, &QPushButton::clicked, this,
+    connect(ui_->settings, &QPushButton::clicked, this,
             [this] { openInstanceWindow(2); });
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
             &LauncherWindow::filterInstances);
