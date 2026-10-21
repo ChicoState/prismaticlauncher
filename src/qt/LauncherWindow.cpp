@@ -67,7 +67,7 @@ void LauncherWindow::connectSignals() {
 
 void LauncherWindow::populateInstances() {
     auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
-    item->setSizeHint(QSize(192, 224));
+    item->setSizeHint(QSize(146, 162));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
     ui_->instances->setCurrentItem(item);

@@ -28,24 +28,24 @@
      <number>0</number>
     </property>
     <property name="topMargin">
-     <number>16</number>
+     <number>0</number>
     </property>
     <property name="rightMargin">
      <number>0</number>
     </property>
     <property name="bottomMargin">
-     <number>16</number>
+     <number>0</number>
     </property>
     <item>
      <layout class="QHBoxLayout" name="libraryToolbar">
       <property name="spacing">
-       <number>8</number>
+       <number>0</number>
       </property>
       <property name="leftMargin">
        <number>8</number>
       </property>
       <property name="rightMargin">
-       <number>8</number>
+       <number>0</number>
       </property>
       <item>
        <widget class="QPushButton" name="playInstance">
@@ -57,14 +57,14 @@
       <item>
        <widget class="QPushButton" name="addInstance">
         <property name="text">
-         <string>+  Add instance</string>
+         <string>+  Add</string>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QPushButton" name="editInstance">
         <property name="text">
-         <string>Edit instance</string>
+         <string>✐ Edit</string>
         </property>
        </widget>
       </item>
@@ -112,24 +112,30 @@
     <item>
      <layout class="QVBoxLayout" name="libraryLayout">
       <property name="spacing">
-       <number>16</number>
+       <number>0</number>
       </property>
       <property name="leftMargin">
-       <number>32</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
-       <number>16</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>32</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
-       <number>16</number>
+       <number>0</number>
       </property>
       <item>
        <widget class="QListWidget" name="instances">
         <property name="accessibleName">
          <string>Game instances. Double click to open the instance window.</string>
+        </property>
+        <property name="frameShadow">
+         <enum>QFrame::Shadow::Plain</enum>
+        </property>
+        <property name="lineWidth">
+         <number>0</number>
         </property>
         <property name="iconSize">
          <size>
