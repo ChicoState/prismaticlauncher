@@ -13,6 +13,10 @@
 #include <QProcess>
 #include <QPushButton>
 #include <QStatusBar>
+#include <QResource>
+
+const int INSTANCE_WIDTH = 146;
+const int INSTANCE_HEIGHT = 162;
 
 namespace {
 QIcon instanceIcon() {
@@ -39,6 +43,7 @@ QIcon instanceIcon() {
 
 LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     : QMainWindow(parent), config_(configFile), ui_(std::make_unique<Ui::LauncherWindow>()) {
+    Q_INIT_RESOURCE(resources);
     ui_->setupUi(this);
     resize(1120, 760);
     setWindowIcon(instanceIcon());
@@ -67,7 +72,7 @@ void LauncherWindow::connectSignals() {
 
 void LauncherWindow::populateInstances() {
     auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
-    item->setSizeHint(QSize(146, 162));
+    item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
     ui_->instances->setCurrentItem(item);
@@ -93,13 +98,13 @@ void LauncherWindow::addInstance() {
                     !value.trimmed().isEmpty());
             });
 
-    if (dialog.exec() != QDialog::Accepted) return;
+    if (dialog.exec() != QDialog::Accepted) {return;}
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
         instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
         ui_->instances);
-    item->setSizeHint(QSize(192, 224));
+    item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, dialogUi.name->text().trimmed());
     item->setData(Qt::UserRole + 1, modded);
     ui_->instanceSearch->clear();

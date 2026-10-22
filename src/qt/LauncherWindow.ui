@@ -39,25 +39,31 @@
     <item>
      <layout class="QHBoxLayout" name="libraryToolbar">
       <property name="spacing">
-       <number>0</number>
+       <number>8</number>
       </property>
       <property name="leftMargin">
        <number>8</number>
       </property>
-      <property name="rightMargin">
-       <number>0</number>
+      <property name="topMargin">
+       <number>4</number>
       </property>
-      <item>
-       <widget class="QPushButton" name="playInstance">
-        <property name="text">
-         <string>▶  Play</string>
-        </property>
-       </widget>
-      </item>
+      <property name="rightMargin">
+       <number>8</number>
+      </property>
+      <property name="bottomMargin">
+       <number>4</number>
+      </property>
       <item>
        <widget class="QPushButton" name="addInstance">
         <property name="text">
          <string>+  Add</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="playInstance">
+        <property name="text">
+         <string>▶  Play</string>
         </property>
        </widget>
       </item>
@@ -98,12 +104,45 @@
        </widget>
       </item>
       <item>
+       <widget class="QPushButton" name="smapi">
+        <property name="toolTip">
+         <string>Configure SMAPI</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/SMAPI_mascot.png</normaloff>:/resources/SMAPI_mascot.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
        <widget class="QPushButton" name="settings">
+        <property name="toolTip">
+         <string>Settings</string>
+        </property>
         <property name="accessibleName">
          <string>Launcher settings</string>
         </property>
         <property name="text">
-         <string>Settings</string>
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/settings.png</normaloff>:/resources/settings.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
         </property>
        </widget>
       </item>
@@ -180,6 +219,8 @@
    </layout>
   </widget>
  </widget>
- <resources/>
+ <resources>
+  <include location="../../resources.qrc"/>
+ </resources>
  <connections/>
 </ui>

@@ -3,6 +3,8 @@ qt_add_library(launcher-ui STATIC
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
     AddInstanceDialog.ui
+    ../../resources.qrc
+
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets)
