@@ -9,10 +9,13 @@ Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its init
 - `scripts/` — Linux CI, quality, and infrastructure-smoke scripts.
 - `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, and launch errors.
 - `src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
+- `src/smapi/` — SMAPI installer, launcher, and manager built as `launcher-smapi`.
+- `tests/smapi/` — SMAPI construction, validation, and launch-error regression coverage.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
 - `documents/infrastructure_plan.md` — approved infrastructure decisions.
 - `.agents/skills/` — repository-specific agent skills.
+- `.agents/*.toml` — existing role definitions; `.github/agents/*.agent.md` — their VS Code custom-agent exports.
 - `src/` — product source belongs here.
 - `packaging/` — not created yet; future product-owned portable-archive packaging belongs here.
 
@@ -52,6 +55,10 @@ cmake --build build/local -j
 ctest --test-dir build/local --output-on-failure
 ./build/local/bin/prismatic-launch
 ```
+
+Linux CI runs the `coverage` preset, then enforces the 60% line-coverage floor on `src/qt/LauncherConfig.cpp`. Shell scripts use LF line endings (enforced by `.gitattributes`) so Docker and Linux runners can execute them after cross-platform checkouts.
+
+The default build also compiles all SMAPI sources. With `BUILD_TESTING=ON` (the default), CMake requires Qt Test and registers `launcher-ui-tests` (offscreen) and `smapi-tests` with CTest. Pass `-DBUILD_TESTING=OFF` when configuring to build without the test executables.
 
 Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; macOS builds produce `bin/prismatic-launch.app`. Development executables still require the Qt runtime.
 
@@ -98,6 +105,58 @@ To capture offscreen screenshots alongside the UI test run:
 PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview QT_QPA_PLATFORM=offscreen ./build/dev/launcher-ui-tests
 ```
 
+## VS Code custom agents
+
+The built-in VS Code Agents window can use the twelve `.agent.md` files in `.github/agents/` as roles with the Copilot or Codex session target. The source roles live in `.agents/*.toml` and `.codex/agents/*.toml`; TOML files alone are not a supported format for this picker. Skills live once in `.agents/skills/`, which the Customizations editor and native Codex can discover. Skills are separate from selectable agent roles.
+
+1. Open this repository folder in VS Code. When working in WSL, open the WSL checkout as the workspace.
+2. Select the Copilot or Codex harness/session target. Run **Chat: Open Customizations**, then select **Agents**; in the Agents window, use **Customizations → Agents**.
+3. The Workspace group and agent picker should list `feature-workflow`, `feature-planner`, `feature-implementer`, `feature-tester`, `feature-reviewer`, `code-reviewer`, `plan-agent`, `plan-reviewer`, `refactor-agent`, `security-auditor`, `test-engineer`, and `web-performance-auditor`. Select one to start using its role instructions. If the list was open before these files were added, run **Developer: Reload Window** and start a new session in this repository folder.
+
+Each export explicitly enables `user-invocable` so it can appear in the picker. The exports use the model selected in VS Code and its default available tools; TOML model identifiers are not copied into the VS Code role's model setting. Original role instructions are retained, with repository guidance added and broken documentation/skill links directed to existing repository files.
+
+After updating source roles or skill metadata, regenerate and check the exports with Python 3.11 or newer:
+
+```bash
+python3 scripts/sync-vscode-agents.py
+python3 scripts/sync-vscode-agents.py --check
+python3 -m unittest discover -s tests/infrastructure -p test_agent_customizations.py
+```
+
+The check does not write files; it fails when an expected agent export is missing or stale, canonical skill metadata is invalid, or obsolete generated agent/skill entries remain. The generator exports both TOML role layouts and validates the repository's single-line skill name/description fields, including YAML quoting. Keep `.github/agents/` in version control so teammates can select the roles without running Python. Agent exports use LF line endings enforced by `.gitattributes`.
+
+Keep one canonical copy of each skill in `.agents/skills/`, with its scripts, references, and templates alongside it. Do not generate matching `.github/skills/` wrappers: the Agents window can list both locations and show duplicate workspace entries. No skill-location override is needed. The expected workspace catalog is 30 skills; personal and built-in skills are counted separately. See [VS Code skill discovery](https://code.visualstudio.com/docs/agent-customization/agent-skills#create-a-skill).
+
+See [VS Code custom agents](https://code.visualstudio.com/docs/agent-customization/custom-agents) for discovery and [the agent file reference](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference) for picker visibility and model behavior. If an agent is still missing after reloading, check the selected workspace and harness, then right-click in Chat and select **Diagnostics** to inspect customization-loading errors.
+
+### Create a feature through completion
+
+1. In the dedicated **Agents window**, start a session in this repository folder and select **Codex**. In the message box, type `/`, choose **feature-workflow**, and describe the feature. You can instead choose **feature-workflow** from the agent picker. The left **Customizations → Skills** view manages the entries; the message box invokes them. In the standalone Codex extension/CLI, use `$feature-workflow`.
+2. Describe your feature in your own words, or optionally fill [the reusable feature request template](documents/templates/feature-request.md). Its four fields cover the feature, user/problem, success criteria, and constraints/exclusions; copying it is not required.
+3. Send the filled request. The coordinator refines the requirements, selects relevant skills, obtains a plan, delegates implementation and tests, arranges independent review, resolves actionable findings, and reports verification. Answer material clarification questions in chat; routine stage transitions continue automatically. Nothing is staged, committed, pushed, published, or deployed by this workflow.
+
+The [workflow skill](.agents/skills/feature-workflow/SKILL.md) contains the stage ordering and routing rules. Native Codex discovers four focused workers from `.codex/agents/`: `feature-planner`, `feature-implementer`, `feature-tester`, and `feature-reviewer`. The planner and reviewer do not edit files; the coordinator assigns non-overlapping files to implementation and test workers. The project `.codex/config.toml` enables delegation and caps active child agents at three. Models, reasoning effort, permissions, and providers inherit from the parent session. The existing seven specialist personas remain selectable for their separate tasks.
+
+If an agent or skill is missing, first run the sync/check commands above and confirm that the session uses this checkout. Until customization files are committed, leave **New Worktree** unselected: a separate worktree does not contain these uncommitted files. Reload VS Code and start a new Codex session after regenerating entries. Inspect Chat's **Diagnostics** for customization-loading errors, malformed frontmatter, disabled entries, or a different working folder. If named workers are not exposed by the harness, the coordinator uses available subagents with their role instructions. If delegation is unavailable altogether, it reports the limitation and performs the stages in the main session without claiming independent review.
+
+The template is ordinary Markdown so it also works by copying into Codex chat. VS Code's `.prompt.md` launchers currently run only in the Local harness; the Codex entry point is this skill/custom agent. See [VS Code prompt file support](https://code.visualstudio.com/docs/agent-customization/prompt-files), [Codex skills](https://learn.chatgpt.com/docs/build-skills), and [native Codex agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
+
+### Refine a task prompt
+
+Use the repository's `refine-task` skill to evaluate and rewrite a draft request before asking an agent to implement it. In the Codex extension, type `$` and select **refine-task** (or open `/skills`), then provide the draft:
+
+```text
+$refine-task
+Improve this draft task prompt:
+Add a way to duplicate an instance. Preserve the original instance.
+```
+
+The skill checks the outcome, project context, scope, constraints, verification, and expected deliverables. It returns a ready-to-copy prompt plus meaningful changes and open questions. It makes one pass by default, labels proposed requirements, preserves your intent, and finishes without implementing the draft task. If the prompt is already sufficient, it keeps the wording instead of manufacturing changes.
+
+Normal automatic discovery remains enabled for requests such as "refine this task prompt"; ordinary questions and direct implementation requests do not need this workflow. It reuses `interview-me`, `idea-refine`, or `spec-driven-development` only when the requested clarification or additional artifact needs them.
+
+Review the result, then explicitly ask Codex to implement it when ready. The skill instructions live in `.agents/skills/refine-task/SKILL.md`; `agents/openai.yaml` provides the display name, description, and starting prompt for supported skill pickers. Codex normally discovers skill changes automatically; restart the Codex session if the new skill is missing.
+
 ## CI and releases
 
 Pull requests run Linux Docker validation, infrastructure checks, formatting, static analysis, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8.3, build the launcher, and run the offscreen Qt tests.
@@ -110,6 +169,7 @@ Required GitHub configuration: create a protected `release` environment; configu
 
 ## Troubleshooting
 
+- **VS Code reports Qt `#include` errors from the configuration provider:** run `cmake --preset dev`, then run **CMake: Configure** with the `dev` preset in VS Code. The SMAPI sources must appear in `build/dev/compile_commands.json` so the editor receives the Qt include paths and C++20 flags. Local `.vscode/c_cpp_properties.json` can use `"configurationProvider": "ms-vscode.cmake-tools"` and `"compileCommands": ["${workspaceFolder}/build/dev/compile_commands.json"]`; see the [VS Code IntelliSense configuration reference](https://code.visualstudio.com/docs/cpp/customize-cpp-settings). If diagnostics remain stale after configuring, reload the editor window.
 - **`cmake --preset dev` cannot find Ninja:** install Ninja and ensure it is on `PATH`, or use a future platform-specific preset.
 - **Docker cannot connect to the daemon:** start Docker Desktop or the Docker Engine service, then rerun the two Docker commands above.
 - **Qt is not found after product targets are added:** install Qt 6.8 LTS and configure CMake with the appropriate `Qt6_DIR`, or use the vcpkg toolchain chosen by the product implementation.

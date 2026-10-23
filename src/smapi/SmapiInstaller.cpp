@@ -62,8 +62,8 @@ std::optional<InstallerCommand> resolveInstallerCommand(const QString& installer
 
 /*
  * Installs SMAPI using installers
- * @param the game directory
- * @param the location of the installer
+ * @param gameDirectory the game directory
+ * @param installerPath the location of the installer
  */
 InstallResult SmapiInstaller::install(const QString& gameDirectory, const QString& installerPath) const {
     const QDir gameDir(gameDirectory);

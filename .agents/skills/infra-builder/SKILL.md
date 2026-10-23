@@ -1,6 +1,6 @@
 ---
 name: infra-builder
-description: Implements the infrastructure described in infrastructure_plan.md: project tooling, Docker, GitHub Actions, smoke tests, README.md, and AGENTS.md. It never implements product behavior or production application code.
+description: "Implements the infrastructure described in infrastructure_plan.md: project tooling, Docker, GitHub Actions, smoke tests, README.md, and AGENTS.md. It never implements product behavior or production application code."
 ---
 
 # Infrastructure Builder
