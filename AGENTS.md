@@ -2,32 +2,36 @@
 
 ## Project status
 
-Prismatic Launcher is an infrastructure-only C++20/Qt 6.8 desktop project foundation. `infrastructure_plan.md` is the approved decision record; the files in this repository implement its tooling, Docker validation, CI, and documentation, not product behavior.
+Prismatic Launcher is a C++20/Qt 6 desktop project with application sources, tests, and build/CI infrastructure. `documents/infrastructure_plan.md` records the approved infrastructure decisions. Product changes follow the user's requested feature scope; infrastructure-only tasks stay within the infrastructure boundaries below.
 
 ## Repository map
 
 - `CMakeLists.txt`, `CMakePresets.json` — CMake/CTest configuration.
 - `vcpkg.json`, `vcpkg-configuration.json` — C++ dependency manifest and pinned registry baseline.
 - `scripts/` — infrastructure checks and Linux CI entrypoint.
-- `tests/infrastructure/` — infrastructure-only test location; product tests are not created yet.
+- `tests/infrastructure/`, `tests/ui/`, `tests/smapi/` — infrastructure checks and Qt application/service tests.
 - `Dockerfile.ci`, `.dockerignore` — Linux validation infrastructure only.
 - `.github/workflows/pr-checks.yml`, `.github/workflows/release.yml` — CI and guarded release workflows.
-- `README.md`, `infrastructure_plan.md` — developer documentation and approved plan.
+- `README.md`, `documents/infrastructure_plan.md` — developer documentation and approved infrastructure plan.
 - `.agents/skills/` — local skill instructions.
 - `.agents/*.toml` — existing agent role definitions.
-- `.github/agents/*.agent.md` — generated, selectable VS Code custom agents; regenerate with `python3 scripts/sync-vscode-agents.py` (Python 3.11+), verify with `--check`.
-- `src/`, `packaging/`, backend/API directories — not created yet.
+- `.github/agents/*.agent.md` — generated VS Code agent roles; regenerate with `python3 scripts/sync-vscode-agents.py` (Python 3.11+), verify with `--check`. Role sources are `.agents/*.toml` and `.codex/agents/*.toml`. The command also validates canonical skills in `.agents/skills/`; do not create duplicate skill entries under `.github/skills/`.
+- `.codex/agents/*.toml`, `.codex/config.toml` — native Codex feature workers and project delegation settings.
+- `documents/templates/feature-request.md` — reusable feature request template.
+- `src/qt/`, `src/smapi/` — native Qt application and SMAPI services.
 
 ## Required reading and skill selection
 
-Read `infrastructure_plan.md`, this file, and the relevant `.agents/skills/*/SKILL.md` before changing the repository. Use `infra-planner` to revise infrastructure decisions; `infra-builder` for plan-approved tooling; `incremental-implementation` and `test-driven-development` for product changes; `browser-testing-with-devtools` or `test-in-browser` only for browser surfaces; `security-and-hardening` for untrusted inputs or external integrations; `documentation-and-adrs` for durable design records; `code-review-and-quality` before merge; `ci-cd-and-automation` for workflow changes; and `git-workflow-and-versioning` for every change.
+Read `documents/infrastructure_plan.md`, this file, and the relevant `.agents/skills/*/SKILL.md` before changing the repository. Use `infra-planner` to revise infrastructure decisions; `infra-builder` for plan-approved tooling; `incremental-implementation` and `test-driven-development` for product changes; `browser-testing-with-devtools` or `test-in-browser` only for browser surfaces; `security-and-hardening` for untrusted inputs or external integrations; `documentation-and-adrs` for durable design records; `code-review-and-quality` before merge; `ci-cd-and-automation` for workflow changes; and `git-workflow-and-versioning` for every change.
 
 Use `refine-task` when asked to evaluate or rewrite a draft task prompt. It prepares the prompt without implementing its contents; it is not a mandatory step for ordinary coding requests.
+
+Use `feature-workflow` for end-to-end application feature requests covering refinement, planning, implementation, tests, and independent review. Its coordinator delegates focused assignments to `feature-planner`, `feature-implementer`, `feature-tester`, and `feature-reviewer` when available. Keep plan-only and prompt-only requests within their stated scope. Follow [the workflow skill](.agents/skills/feature-workflow/SKILL.md) and use [the request template](documents/templates/feature-request.md). Workers do not recursively delegate. Do not stage, commit, push, publish, or deploy unless the user separately requests it.
 
 ## Boundaries
 
 - Do not add product UI, game discovery, mod-management behavior, domain schema, or release packaging while doing infrastructure-only work.
-- Do not change the selected C++20, Qt 6, vcpkg, SQLite, Docker, or GitHub Release decisions without revising `infrastructure_plan.md` through `infra-planner`.
+- Do not change the selected C++20, Qt 6, vcpkg, SQLite, Docker, or GitHub Release decisions without revising `documents/infrastructure_plan.md` through `infra-planner`.
 - Do not commit secrets, signing certificates, generated build output, coverage reports, vcpkg installations, or local game/mod data.
 - Docker validates Linux only; it does not replace native Windows/macOS packaging, signing, or macOS notarization.
 

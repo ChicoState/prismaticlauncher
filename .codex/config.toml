@@ -1,0 +1,4 @@
+# Enable the focused feature workers while preserving the selected model and permissions.
+[agents]
+enabled = true
+max_concurrent_threads_per_session = 3

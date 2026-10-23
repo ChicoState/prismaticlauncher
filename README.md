@@ -107,24 +107,39 @@ PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview QT_QPA_PLATFORM=offscreen ./build/d
 
 ## VS Code custom agents
 
-The built-in VS Code Agents window can use the seven `.agent.md` files in `.github/agents/` as roles with the Copilot or Codex session target. The original `.agents/*.toml` files remain available; TOML role files are not a supported format for this picker. The `.agents/skills/` folders provide skills, which are separate from selectable agent roles.
+The built-in VS Code Agents window can use the twelve `.agent.md` files in `.github/agents/` as roles with the Copilot or Codex session target. The source roles live in `.agents/*.toml` and `.codex/agents/*.toml`; TOML files alone are not a supported format for this picker. Skills live once in `.agents/skills/`, which the Customizations editor and native Codex can discover. Skills are separate from selectable agent roles.
 
 1. Open this repository folder in VS Code. When working in WSL, open the WSL checkout as the workspace.
 2. Select the Copilot or Codex harness/session target. Run **Chat: Open Customizations**, then select **Agents**; in the Agents window, use **Customizations → Agents**.
-3. The Workspace group and agent picker should list `code-reviewer`, `plan-agent`, `plan-reviewer`, `refactor-agent`, `security-auditor`, `test-engineer`, and `web-performance-auditor`. Select one to start using its role instructions. If the list was open before these files were added, run **Developer: Reload Window**.
+3. The Workspace group and agent picker should list `feature-workflow`, `feature-planner`, `feature-implementer`, `feature-tester`, `feature-reviewer`, `code-reviewer`, `plan-agent`, `plan-reviewer`, `refactor-agent`, `security-auditor`, `test-engineer`, and `web-performance-auditor`. Select one to start using its role instructions. If the list was open before these files were added, run **Developer: Reload Window** and start a new session in this repository folder.
 
 Each export explicitly enables `user-invocable` so it can appear in the picker. The exports use the model selected in VS Code and its default available tools; TOML model identifiers are not copied into the VS Code role's model setting. Original role instructions are retained, with repository guidance added and broken documentation/skill links directed to existing repository files.
 
-After updating the source roles, regenerate and check the exports with Python 3.11 or newer:
+After updating source roles or skill metadata, regenerate and check the exports with Python 3.11 or newer:
 
 ```bash
 python3 scripts/sync-vscode-agents.py
 python3 scripts/sync-vscode-agents.py --check
+python3 -m unittest discover -s tests/infrastructure -p test_agent_customizations.py
 ```
 
-The check does not write files; it fails when an expected export is missing or differs from its TOML role. Keep the generated `.github/agents/` files in version control so teammates can use them without running Python. Their LF line endings are enforced by `.gitattributes`.
+The check does not write files; it fails when an expected agent export is missing or stale, canonical skill metadata is invalid, or obsolete generated agent/skill entries remain. The generator exports both TOML role layouts and validates the repository's single-line skill name/description fields, including YAML quoting. Keep `.github/agents/` in version control so teammates can select the roles without running Python. Agent exports use LF line endings enforced by `.gitattributes`.
+
+Keep one canonical copy of each skill in `.agents/skills/`, with its scripts, references, and templates alongside it. Do not generate matching `.github/skills/` wrappers: the Agents window can list both locations and show duplicate workspace entries. No skill-location override is needed. The expected workspace catalog is 30 skills; personal and built-in skills are counted separately. See [VS Code skill discovery](https://code.visualstudio.com/docs/agent-customization/agent-skills#create-a-skill).
 
 See [VS Code custom agents](https://code.visualstudio.com/docs/agent-customization/custom-agents) for discovery and [the agent file reference](https://code.visualstudio.com/docs/agents/reference/custom-agent-file-reference) for picker visibility and model behavior. If an agent is still missing after reloading, check the selected workspace and harness, then right-click in Chat and select **Diagnostics** to inspect customization-loading errors.
+
+### Create a feature through completion
+
+1. In the dedicated **Agents window**, start a session in this repository folder and select **Codex**. In the message box, type `/`, choose **feature-workflow**, and describe the feature. You can instead choose **feature-workflow** from the agent picker. The left **Customizations → Skills** view manages the entries; the message box invokes them. In the standalone Codex extension/CLI, use `$feature-workflow`.
+2. Describe your feature in your own words, or optionally fill [the reusable feature request template](documents/templates/feature-request.md). Its four fields cover the feature, user/problem, success criteria, and constraints/exclusions; copying it is not required.
+3. Send the filled request. The coordinator refines the requirements, selects relevant skills, obtains a plan, delegates implementation and tests, arranges independent review, resolves actionable findings, and reports verification. Answer material clarification questions in chat; routine stage transitions continue automatically. Nothing is staged, committed, pushed, published, or deployed by this workflow.
+
+The [workflow skill](.agents/skills/feature-workflow/SKILL.md) contains the stage ordering and routing rules. Native Codex discovers four focused workers from `.codex/agents/`: `feature-planner`, `feature-implementer`, `feature-tester`, and `feature-reviewer`. The planner and reviewer do not edit files; the coordinator assigns non-overlapping files to implementation and test workers. The project `.codex/config.toml` enables delegation and caps active child agents at three. Models, reasoning effort, permissions, and providers inherit from the parent session. The existing seven specialist personas remain selectable for their separate tasks.
+
+If an agent or skill is missing, first run the sync/check commands above and confirm that the session uses this checkout. Until customization files are committed, leave **New Worktree** unselected: a separate worktree does not contain these uncommitted files. Reload VS Code and start a new Codex session after regenerating entries. Inspect Chat's **Diagnostics** for customization-loading errors, malformed frontmatter, disabled entries, or a different working folder. If named workers are not exposed by the harness, the coordinator uses available subagents with their role instructions. If delegation is unavailable altogether, it reports the limitation and performs the stages in the main session without claiming independent review.
+
+The template is ordinary Markdown so it also works by copying into Codex chat. VS Code's `.prompt.md` launchers currently run only in the Local harness; the Codex entry point is this skill/custom agent. See [VS Code prompt file support](https://code.visualstudio.com/docs/agent-customization/prompt-files), [Codex skills](https://learn.chatgpt.com/docs/build-skills), and [native Codex agents](https://learn.chatgpt.com/docs/agent-configuration/subagents).
 
 ### Refine a task prompt
 
