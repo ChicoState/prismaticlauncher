@@ -6,6 +6,9 @@ not a search of the full Nexus catalogue. Click a name or use the arrow keys to
 show its summary and full details. The bottom-right **Open download page** button
 opens that mod's Nexus Files tab in the default browser. It does not download or
 install files. Unavailable mods have a disabled download button.
+HTML and Nexus BBCode descriptions are converted to readable plain text, with
+paragraph/line breaks, decoded HTML entities, and bullets for BBCode lists.
+Descriptions already in plain text retain their line breaks.
 
 ## Run
 

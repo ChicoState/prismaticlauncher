@@ -7,10 +7,13 @@
 #include <QListWidget>
 #include <QLocale>
 #include <QPushButton>
+#include <QRegularExpression>
 #include <QScrollArea>
 #include <QScrollBar>
 #include <QSignalBlocker>
 #include <QSplitter>
+#include <QTextDocument>
+#include <QTextDocumentFragment>
 #include <QVBoxLayout>
 
 namespace {
@@ -21,6 +24,25 @@ QLabel* textLabel(const QString& text, const QString& name) {
     label->setWordWrap(true);
     label->setTextInteractionFlags(Qt::TextSelectableByMouse);
     return label;
+}
+
+QString readableDescription(const QString& text) {
+    // Nexus uses BBCode as well as HTML. Match known tags so mod names such as [CP] survive.
+    static const QRegularExpression listTags(R"(\[/?list(?:=[^\]\r\n]*)?\])",
+                                             QRegularExpression::CaseInsensitiveOption);
+    static const QRegularExpression itemTag(R"(\n?\[\*\])");
+    static const QRegularExpression formattingTags(
+        R"(\[/?(?:b|i|u|s|strike|size|font|color|center|left|right|justify|url|img|quote|code|spoiler|heading|youtube|video|table|tr|td|th)(?:=[^\]\r\n]*)?\])",
+        QRegularExpression::CaseInsensitiveOption);
+    // Qt's heuristic can stop at a newline before HTML following a BBCode heading.
+    static const QRegularExpression htmlTag(R"(<[A-Za-z][^>]*>)");
+    auto plain = (Qt::mightBeRichText(text) || text.contains(htmlTag))
+                     ? QTextDocumentFragment::fromHtml(text).toPlainText()
+                     : text;
+    plain.replace(listTags, "\n");
+    plain.replace(itemTag, "\n• ");
+    plain.remove(formattingTags);
+    return plain;
 }
 }  // namespace
 
@@ -229,8 +251,10 @@ void ModBrowser::selectMod() {
 void ModBrowser::setModDetails(const NexusModDetails& mod) {
     if (selectedId_ <= 0 || mod.id != selectedId_) return;
     showSummary(mod);
-    description_->setText(mod.description.isEmpty() ? "No additional description provided."
-                                                    : mod.description);
+    // Strip API HTML without enabling rich text or links in the label.
+    const auto description = readableDescription(mod.description);
+    description_->setText(description.isEmpty() ? "No additional description provided."
+                                              : description);
     description_->show();
     auto metadata = metadata_->text();
     metadata += QString("\n%1 downloads").arg(QLocale().toString(mod.downloadCount));

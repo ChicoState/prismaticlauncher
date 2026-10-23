@@ -194,6 +194,49 @@ class LauncherTests : public QObject {
         QVERIFY(!browser.findChild<QPushButton*>("modDownload")->isEnabled());
     }
 
+    void modDescriptionReadableText_data() {
+        QTest::addColumn<QString>("description");
+        QTest::addColumn<QString>("expected");
+        QTest::newRow("html")
+            << "<p><b>Seasonal</b> &amp; cozy</p><p>Install:<br>Copy to Mods.</p>"
+            << "Seasonal & cozy\nInstall:\nCopy to Mods.";
+        QTest::newRow("plain") << "First line\n\nSecond line: 1 < 2 & 3 > 2."
+                               << "First line\n\nSecond line: 1 < 2 & 3 > 2.";
+        QTest::newRow("escaped-tags") << "<p>Use &lt;b&gt; for bold.</p>"
+                                      << "Use <b> for bold.";
+        QTest::newRow("empty") << "" << "No additional description provided.";
+        QTest::newRow("bbcode")
+            << "[center][size=5][b]Seasonal farm[/b][/size][/center]\n"
+               "[color=#ffffff]Install[/color]\n[list][*]Copy to Mods.[*]Launch.[/list]\n"
+               "[url=https://example.com]Requirements[/url]"
+            << "Seasonal farm\nInstall\n\n• Copy to Mods.\n• Launch.\n\nRequirements";
+        QTest::newRow("literal-brackets") << "Requires [CP] and [some mod]."
+                                          << "Requires [CP] and [some mod].";
+        QTest::newRow("mixed-nexus-markup")
+            << "[size=4][b]Description[/b][/size]\n"
+               "<br />I didn't see a recolor for the Update Tracker Mod to match the Overgrown "
+               "Flowery Interface mod so this is what this does! I have Recolored the Update "
+               "Tracker buttons to match Overgrown Flowery Interface!\n<br />"
+            << "Description \nI didn't see a recolor for the Update Tracker Mod to match the "
+               "Overgrown Flowery Interface mod so this is what this does! I have Recolored "
+               "the Update Tracker buttons to match Overgrown Flowery Interface! \n";
+    }
+
+    void modDescriptionReadableText() {
+        QFETCH(QString, description);
+        QFETCH(QString, expected);
+        ModBrowser browser;
+        browser.setMods(sampleMods());
+        browser.findChild<QListWidget*>("modList")->setCurrentRow(0);
+        NexusModDetails details;
+        static_cast<NexusModSummary&>(details) = sampleMods().first();
+        details.description = description;
+        browser.setModDetails(details);
+        auto* label = browser.findChild<QLabel*>("modDescription");
+        QCOMPARE(label->text(), expected);
+        QCOMPARE(label->textFormat(), Qt::PlainText);
+    }
+
     void staleDetailsAndUnavailableMods() {
         ModBrowser browser;
         browser.setMods(sampleMods());
