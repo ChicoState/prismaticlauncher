@@ -1,6 +1,12 @@
 
 #include "SmapiManager.h"
 
+#include <utility>
+
+SmapiManager::SmapiManager(std::unique_ptr<SmapiInstaller> installer,
+                           std::unique_ptr<SmapiLauncher> launcher)
+    : installer_(std::move(installer)), launcher_(std::move(launcher)) {}
+
 /* 
 * Installs SMAPI using the attached installer
 * @param the game directory
