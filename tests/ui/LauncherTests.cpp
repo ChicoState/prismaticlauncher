@@ -1,16 +1,18 @@
+#include <QComboBox>
 #include <QDialog>
 #include <QDir>
 #include <QFile>
+#include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
 #include <QSettings>
-#include <QStackedWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest>
 
+#include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
 
@@ -61,13 +63,16 @@ class LauncherTests : public QObject {
                 dialog->accept();
             }
         });
-        for (auto* button : window.findChildren<QPushButton*>()) {
-            if (button->text() == "+  Add instance") button->click();
-        }
+        auto* addButton = window.findChild<QPushButton*>("addInstance");
+        QVERIFY(addButton);
+        addButton->click();
         auto* instances = window.findChild<QListWidget*>("instances");
         QCOMPARE(instances->count(), 2);
         QCOMPARE(instances->currentItem()->data(Qt::UserRole).toString(), QString("Test farm"));
-        QCOMPARE(window.findChild<QStackedWidget*>("pages")->currentIndex(), 1);
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        QVERIFY(instanceWindow->isVisible());
+        QCOMPARE(instanceWindow->findChild<QLabel*>("detailTitle")->text(), QString("Test farm"));
     }
 
     void navigateAndFilter() {
@@ -76,8 +81,7 @@ class LauncherTests : public QObject {
         window.show();
         auto* instances = window.findChild<QListWidget*>("instances");
         auto* search = window.findChild<QLineEdit*>("instanceSearch");
-        auto* pages = window.findChild<QStackedWidget*>("pages");
-        QVERIFY(instances && search && pages);
+        QVERIFY(instances && search);
         QCOMPARE(instances->count(), 1);
         const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
         if (!screenshots.isEmpty()) {
@@ -91,14 +95,43 @@ class LauncherTests : public QObject {
         search->clear();
         QVERIFY(!instances->item(0)->isHidden());
         window.findChild<QPushButton*>("editInstance")->click();
-        QCOMPARE(pages->currentIndex(), 1);
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        QVERIFY(instanceWindow->isVisible());
         if (!screenshots.isEmpty()) {
             QTest::qWait(40);
             QApplication::processEvents();
-            QVERIFY(window.grab().save(screenshots + "/mods.png"));
+            QVERIFY(instanceWindow->grab().save(screenshots + "/mods.png"));
         }
-        window.findChild<QPushButton*>("backToLibrary")->click();
-        QCOMPARE(pages->currentIndex(), 0);
+        instanceWindow->findChild<QPushButton*>("backToLibrary")->click();
+        QVERIFY(!instanceWindow->isVisible());
+    }
+
+    void instanceWindowUpdatesLibraryMode() {
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+        auto* item = window.findChild<QListWidget*>("instances")->currentItem();
+
+        window.findChild<QPushButton*>("editInstance")->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        instanceWindow->findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
+
+        QCOMPARE(item->data(Qt::UserRole + 1).toBool(), true);
+        QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
+    }
+
+    void launcherSettingsOpensInstanceSettingsTab() {
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+
+        auto* settingsButton = window.findChild<QPushButton*>("settings");
+        QVERIFY(settingsButton);
+        settingsButton->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 2);
+        QVERIFY(instanceWindow->isVisible());
     }
 
     void missingExecutable() {
@@ -123,19 +156,21 @@ class LauncherTests : public QObject {
         QTemporaryDir temp;
         const auto file = temp.filePath("launcher.ini");
         LauncherWindow window(file);
-        auto* path = window.findChild<QLineEdit*>("gamePath");
+        window.findChild<QPushButton*>("editInstance")->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        auto* path = instanceWindow->findChild<QLineEdit*>("gamePath");
         QVERIFY(path);
         path->setText(temp.path());
-        window.findChild<QPushButton*>("savePath")->click();
+        instanceWindow->findChild<QPushButton*>("savePath")->click();
         QCOMPARE(LauncherConfig(file).gameDirectory(), temp.path());
-        window.findChild<QPushButton*>("editInstance")->click();
-        window.findChild<QListWidget*>("navigation")->setCurrentRow(2);
-        window.resize(820, 600);
-        window.show();
+        instanceWindow->findChild<QListWidget*>("navigation")->setCurrentRow(2);
+        instanceWindow->resize(820, 600);
+        instanceWindow->show();
         const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
         if (!screenshots.isEmpty()) {
             QTest::qWait(40);
-            QVERIFY(window.grab().save(screenshots + "/settings-minimum.png"));
+            QVERIFY(instanceWindow->grab().save(screenshots + "/settings-minimum.png"));
         }
     }
 };
