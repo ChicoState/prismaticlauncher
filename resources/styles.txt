@@ -1,0 +1,10 @@
+QT does not allow the use of explicitly defined variables in .qss stylesheets. This file is to store all common attributes used in style.qss
+
+Colors
+
+@primaryDark = #778da9
+@primaryDarker = #415a77
+@primaryDarkest = #0d1b2a
+@primaryLight = #e0e1dd
+@accent = #ffb703
+@lightAccent = #ffe8ad

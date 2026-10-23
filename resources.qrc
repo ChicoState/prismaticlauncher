@@ -1,0 +1,7 @@
+<RCC>
+    <qresource prefix="/resources">
+        <file alias="SMAPI_mascot.png">resources/SMAPI_mascot.png</file>
+        <file alias="settings.png">resources/cogwheel.png</file>
+        <file alias="logo.png">resources/logo.png</file>
+    </qresource>
+</RCC>
