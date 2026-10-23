@@ -1,8 +1,8 @@
+#include <QComboBox>
 #include <QDialog>
 #include <QDir>
 #include <QFile>
 #include <QLabel>
-#include <QComboBox>
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
@@ -63,9 +63,9 @@ class LauncherTests : public QObject {
                 dialog->accept();
             }
         });
-        for (auto* button : window.findChildren<QPushButton*>()) {
-            if (button->text() == "+  Add instance") button->click();
-        }
+        auto* addButton = window.findChild<QPushButton*>("addInstance");
+        QVERIFY(addButton);
+        addButton->click();
         auto* instances = window.findChild<QListWidget*>("instances");
         QCOMPARE(instances->count(), 2);
         QCOMPARE(instances->currentItem()->data(Qt::UserRole).toString(), QString("Test farm"));
@@ -125,7 +125,9 @@ class LauncherTests : public QObject {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
 
-        window.findChild<QPushButton*>("headerSettings")->click();
+        auto* settingsButton = window.findChild<QPushButton*>("settings");
+        QVERIFY(settingsButton);
+        settingsButton->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
         QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 2);
