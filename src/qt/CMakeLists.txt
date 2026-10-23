@@ -2,9 +2,10 @@ qt_add_library(launcher-ui STATIC
     LauncherConfig.cpp LauncherConfig.h
     LauncherWindow.cpp LauncherWindow.h
     InstancePages.cpp
+    NexusPage.cpp NexusPage.h
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(launcher-ui PUBLIC Qt6::Widgets)
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)
 qt_add_resources(launcher-ui ui-resources
     PREFIX "/ui"
     FILES style.qss config/defaults.ini
@@ -17,3 +18,10 @@ set_target_properties(prismatic-launch PROPERTIES
     MACOSX_BUNDLE TRUE
     RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/bin"
 )
+
+if(BUILD_TESTING)
+    qt_add_executable(launcher-ui-tests ../../tests/ui/LauncherTests.cpp)
+    target_link_libraries(launcher-ui-tests PRIVATE launcher-ui Qt6::Test nexus_fetch_list)
+    add_test(NAME launcher-ui-tests COMMAND launcher-ui-tests)
+    set_tests_properties(launcher-ui-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+endif()

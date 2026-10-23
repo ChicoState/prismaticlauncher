@@ -2,6 +2,7 @@
 #include <QDir>
 #include <QFile>
 #include <QLineEdit>
+#include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPushButton>
@@ -13,10 +14,57 @@
 
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
+#include "Nexus_fetchList.hpp"
 
 class LauncherTests : public QObject {
     Q_OBJECT
    private slots:
+    void browseNexusMods() {
+        const auto originalKey = qgetenv("NEXUS_API_KEY");
+        qunsetenv("NEXUS_API_KEY");
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+        if (originalKey.isNull()) qunsetenv("NEXUS_API_KEY");
+        else qputenv("NEXUS_API_KEY", originalKey);
+        auto* browse = window.findChild<QPushButton*>("browseNexusMods");
+        QVERIFY(browse);
+        browse->click();
+        auto* pages = window.findChild<QStackedWidget*>("pages");
+        QCOMPARE(pages->currentWidget()->objectName(), QString("nexusPage"));
+        auto* status = window.findChild<QLabel*>("nexusStatus");
+        auto* refresh = window.findChild<QPushButton*>("refreshNexusMods");
+        auto* list = window.findChild<QListWidget*>("nexusMods");
+        auto* client = window.findChild<NexusModClient*>();
+        QVERIFY(status && refresh && list && client);
+        QVERIFY(status->text().contains("NEXUS_API_KEY"));
+        QVERIFY(refresh->isEnabled());
+        const auto mods = NexusModClient::parseModListResponse(
+            R"([{"mod_id":42,"name":"<b>Valley Expanded</b>","author":"A farmer","version":"1.2","summary":"More places to explore."}])");
+        QVERIFY(mods.has_value());
+        emit client->modListFetched(*mods);
+        QCOMPARE(list->count(), 1);
+        QVERIFY(list->item(0)->text().contains("<b>Valley Expanded</b>"));
+        QVERIFY(list->item(0)->text().contains("A farmer"));
+        QVERIFY(list->item(0)->text().contains("1.2"));
+        QVERIFY(list->item(0)->text().contains("More places to explore."));
+        window.show();
+        const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
+        if (!screenshots.isEmpty()) {
+            QVERIFY(QDir().mkpath(screenshots));
+            QTest::qWait(40);
+            QVERIFY(window.grab().save(screenshots + "/nexus.png"));
+        }
+        emit client->modListFetched({});
+        QCOMPARE(list->count(), 0);
+        QVERIFY(status->text().contains("No mods"));
+        emit client->requestFailed({"Unavailable", 503});
+        QVERIFY(status->text().contains("503"));
+        QVERIFY(refresh->isEnabled());
+        refresh->click();
+        QVERIFY(status->text().contains("NEXUS_API_KEY"));
+        window.findChild<QPushButton*>("backFromNexus")->click();
+        QCOMPARE(pages->currentIndex(), 0);
+    }
     void initTestCase() {
         QFile style(":/ui/style.qss");
         QVERIFY(style.open(QIODevice::ReadOnly));

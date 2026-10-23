@@ -1,4 +1,5 @@
 #include "LauncherWindow.h"
+#include "NexusPage.h"
 
 #include <QComboBox>
 #include <QDialog>
@@ -73,6 +74,12 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     pages_->setObjectName("pages");
     pages_->addWidget(createLibrary());
     pages_->addWidget(createDetails());
+    auto* nexus = new NexusPage(pages_);
+    pages_->addWidget(nexus);
+    connect(nexus, &NexusPage::backRequested, this, [this] {
+        pages_->setCurrentIndex(0);
+        findChild<QPushButton*>("browseNexusMods")->setFocus();
+    });
     layout->addWidget(pages_, 1);
     setCentralWidget(root);
     statusBar()->showMessage("Local launcher  /  UI preview");
@@ -94,6 +101,15 @@ QWidget* LauncherWindow::createLibrary() {
     auto* description = new QLabel("Your Stardew Valley instances, all in one place.");
     description->setObjectName("muted");
     layout->addWidget(description);
+
+    auto* browse = new QPushButton("Browse Nexus mods");
+    browse->setObjectName("browseNexusMods");
+    layout->addWidget(browse, 0, Qt::AlignLeft);
+    connect(browse, &QPushButton::clicked, this, [this] {
+        auto* nexus = pages_->findChild<NexusPage*>("nexusPage", Qt::FindDirectChildrenOnly);
+        pages_->setCurrentWidget(nexus);
+        nexus->fetchMods();
+    });
 
     auto* toolbar = new QHBoxLayout;
     auto* add = new QPushButton("+  Add instance");

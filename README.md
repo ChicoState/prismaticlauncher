@@ -53,6 +53,14 @@ To make a live, read-only request to Nexus Mods, supply an API key only through 
 NEXUS_API_KEY='your-api-key' ./build/dev/nexus-fetch-list
 ```
 
+To browse the same list in the desktop UI, launch `./build/dev/bin/prismatic-launch`
+with `NEXUS_API_KEY` set in its environment, then click **Browse Nexus mods** on the
+main library page. The separate page shows names, authors, versions, endorsements,
+and summaries for the ten most recently updated mods. **Refresh mods** fetches the
+list again; **Back to library** returns to your instances. Requests run asynchronously
+and the page reports loading, empty results, and errors. The key is kept in memory
+only; after changing it, restart the launcher. This view does not install mods.
+
 The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
 =======
 For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
