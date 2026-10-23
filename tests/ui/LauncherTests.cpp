@@ -15,6 +15,7 @@
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
+#include "SmapiWindow.h"
 
 class LauncherTests : public QObject {
     Q_OBJECT
@@ -121,17 +122,17 @@ class LauncherTests : public QObject {
         QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
     }
 
-    void launcherSettingsOpensInstanceSettingsTab() {
+    void launcherSettingsOpensSmapiWindow() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
 
         auto* settingsButton = window.findChild<QPushButton*>("settings");
         QVERIFY(settingsButton);
         settingsButton->click();
-        auto* instanceWindow = window.findChild<InstanceWindow*>();
-        QVERIFY(instanceWindow);
-        QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 2);
-        QVERIFY(instanceWindow->isVisible());
+        auto* smapiWindow = window.findChild<SmapiWindow*>();
+        QVERIFY(smapiWindow);
+        QVERIFY(smapiWindow->isVisible());
+        QCOMPARE(smapiWindow->windowTitle(), QString("SMAPI Settings"));
     }
 
     void missingExecutable() {

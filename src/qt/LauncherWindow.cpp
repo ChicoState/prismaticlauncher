@@ -1,6 +1,7 @@
 #include "LauncherWindow.h"
 
 #include "InstanceWindow.h"
+#include "SmapiWindow.h"
 #include "ui_AddInstanceDialog.h"
 #include "ui_LauncherWindow.h"
 
@@ -56,8 +57,7 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->settings, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(2); });
+    connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
             &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
@@ -68,6 +68,13 @@ void LauncherWindow::connectSignals() {
             [this] { openInstanceWindow(); });
     connect(ui_->instances, &QListWidget::itemDoubleClicked, this,
             [this] { openInstanceWindow(); });
+}
+
+void LauncherWindow::openSmapiWindow() {
+    if (!smapiWindow_) smapiWindow_ = new SmapiWindow(this);
+    smapiWindow_->show();
+    smapiWindow_->raise();
+    smapiWindow_->activateWindow();
 }
 
 void LauncherWindow::populateInstances() {

@@ -4,6 +4,7 @@ qt_add_library(launcher-ui STATIC
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
     AddInstanceDialog.ui
     ../../resources.qrc
+    SmapiWindow.h SmapiWindow.cpp SmapiWindow.ui
 
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
