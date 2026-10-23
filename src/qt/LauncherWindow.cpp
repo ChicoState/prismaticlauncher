@@ -46,7 +46,7 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     Q_INIT_RESOURCE(resources);
     ui_->setupUi(this);
     resize(1120, 760);
-    setWindowIcon(instanceIcon());
+    setWindowIcon(QIcon(":/resources/logo.png"));
     statusBar()->showMessage("Local launcher  /  UI preview");
 
     connectSignals();
