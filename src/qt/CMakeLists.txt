@@ -3,6 +3,7 @@ qt_add_library(launcher-ui STATIC
     LauncherWindow.cpp LauncherWindow.h
     InstancePages.cpp
     NexusPage.cpp NexusPage.h
+    ModBrowser.cpp ModBrowser.h
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)

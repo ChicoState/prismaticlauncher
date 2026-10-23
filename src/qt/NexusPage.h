@@ -2,10 +2,8 @@
 
 #include <QWidget>
 
+class ModBrowser;
 class NexusModClient;
-class QLabel;
-class QListWidget;
-class QPushButton;
 
 class NexusPage : public QWidget {
     Q_OBJECT
@@ -18,8 +16,6 @@ class NexusPage : public QWidget {
 
    private:
     NexusModClient* client_;
-    QLabel* status_;
-    QListWidget* mods_;
-    QPushButton* refresh_;
+    ModBrowser* browser_;
     bool loading_ = false;
 };

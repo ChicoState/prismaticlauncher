@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QPlainTextEdit>
+#include <QPointer>
 #include <QPushButton>
 #include <QScrollArea>
 #include <QStackedWidget>
@@ -14,6 +15,7 @@
 #include <QVBoxLayout>
 
 #include "LauncherWindow.h"
+#include "ModBrowser.h"
 
 namespace {
 QLabel* label(const QString& text, const QString& role) {
@@ -94,19 +96,40 @@ QWidget* LauncherWindow::createDetails() {
 }
 
 QWidget* LauncherWindow::createModsPage() {
-    auto* page = emptyPage("Your mods", "A home for the little things that change everything.");
-    auto* layout = qobject_cast<QVBoxLayout*>(page->layout());
-    auto* tools = new QHBoxLayout;
-    tools->addWidget(label("PREVIEW", "eyebrow"));
-    tools->addStretch();
-    for (const auto* text : {"Add mod", "Remove", "Update"}) {
-        auto* button = new QPushButton(text);
-        button->setEnabled(false);
-        button->setToolTip("Mod installation and management are not implemented in this UI build.");
-        tools->addWidget(button);
-    }
-    layout->insertLayout(2, tools);
-    return page;
+    auto* browser = new ModBrowser;
+    const auto apiKey = qEnvironmentVariable("NEXUS_API_KEY");
+    auto* client = new NexusModClient(apiKey, browser);
+    connect(client, &NexusModClient::modListFetched, browser, &ModBrowser::setMods);
+    connect(client, &NexusModClient::requestFailed, browser,
+            [browser](const NexusApiError& error) { browser->setListError(error.message); });
+    connect(browser, &ModBrowser::refreshRequested, browser, [browser, client, apiKey] {
+        browser->beginLoading();
+        if (apiKey.trimmed().isEmpty()) {
+            browser->setListError(
+                "Set NEXUS_API_KEY in the launcher's environment, then restart "
+                "to browse Nexus Mods. Your key is never saved here.");
+            return;
+        }
+        client->fetchModList();
+    });
+    connect(browser, &ModBrowser::modSelected, browser,
+            [browser, apiKey, detailsClient = QPointer<NexusModClient>()](qint64 id) mutable {
+                // Each selection owns its request; destroying the old client cancels it and
+                // prevents late errors from replacing the newly selected mod's details.
+                delete detailsClient.data();
+                detailsClient = nullptr;
+                if (id <= 0) return;
+                detailsClient = new NexusModClient(apiKey, browser);
+                connect(detailsClient, &NexusModClient::modDetailsFetched, browser,
+                        &ModBrowser::setModDetails);
+                connect(detailsClient, &NexusModClient::requestFailed, browser,
+                        [browser](const NexusApiError& error) {
+                            browser->setDetailsError(error.message);
+                        });
+                detailsClient->fetchModDetails(id);
+            });
+    browser->refreshRequested();
+    return browser;
 }
 
 QWidget* LauncherWindow::createLogsPage() {
