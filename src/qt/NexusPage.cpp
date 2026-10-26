@@ -7,7 +7,7 @@
 
 #include "ModBrowser.h"
 
-NexusPage::NexusPage(QWidget* parent) : QWidget(parent) {
+NexusPage::NexusPage(QWidget* parent, bool showBack) : QWidget(parent) {
     setObjectName("nexusPage");
     const auto apiKey = qEnvironmentVariable("NEXUS_API_KEY");
     const bool missingKey = apiKey.trimmed().isEmpty();
@@ -17,9 +17,10 @@ NexusPage::NexusPage(QWidget* parent) : QWidget(parent) {
     layout->setContentsMargins(0, 0, 0, 0);
     layout->setSpacing(0);
     auto* toolbar = new QHBoxLayout;
-    toolbar->setContentsMargins(24, 24, 24, 0);
+    toolbar->setContentsMargins(16, showBack ? 8 : 0, 16, 0);
     auto* back = new QPushButton("←  Back to library");
     back->setObjectName("backFromNexus");
+    back->setVisible(showBack);
     toolbar->addWidget(back);
     toolbar->addStretch();
     layout->addLayout(toolbar);

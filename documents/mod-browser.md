@@ -44,6 +44,9 @@ be smoke-tested on the supported native platforms before release.
 
 ## Visual source
 
-The lighter surfaces and amber selection/action colors follow the newer
-`launcherWindow` branch. Its separate-window/Designer refactor was not merged;
-the existing instance navigation and API client remain intact.
+The browser is integrated with the Designer-based launcher and separate instance
+window from `main`. It uses the same light gray canvas, white surfaces, 4px panel
+corners, amber list selections, blue download action, and compact controls.
+The instance Mods tab loads the list on first entry and preserves selection when
+the window is closed and reopened. The library toolbar also offers standalone
+Nexus browsing with a back button.

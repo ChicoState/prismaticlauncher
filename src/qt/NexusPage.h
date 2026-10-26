@@ -8,7 +8,7 @@ class NexusModClient;
 class NexusPage : public QWidget {
     Q_OBJECT
    public:
-    explicit NexusPage(QWidget* parent = nullptr);
+    explicit NexusPage(QWidget* parent = nullptr, bool showBack = true);
     void fetchMods();
 
    signals:

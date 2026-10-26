@@ -49,12 +49,12 @@ QString readableDescription(const QString& text) {
 ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     setObjectName("modBrowser");
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(24, 24, 24, 24);
+    layout->setContentsMargins(16, 16, 16, 16);
     layout->setSpacing(16);
     auto* heading = new QHBoxLayout;
     auto* headingText = new QVBoxLayout;
     headingText->setSpacing(4);
-    headingText->addWidget(textLabel("Discover mods", "sectionTitle"));
+    headingText->addWidget(textLabel("Nexus mods", "sectionTitle"));
     headingText->addWidget(textLabel("Recently updated on Nexus Mods · Stardew Valley", "muted"));
     heading->addLayout(headingText, 1);
     refresh_ = new QPushButton("Refresh");
@@ -66,7 +66,7 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     auto* splitter = new QSplitter(Qt::Horizontal);
     splitter->setObjectName("modSplitter");
     splitter->setChildrenCollapsible(false);
-    splitter->setHandleWidth(12);
+    splitter->setHandleWidth(8);
     auto* master = new QWidget;
     master->setMinimumWidth(176);
     auto* masterLayout = new QVBoxLayout(master);
@@ -96,7 +96,7 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     detailPanel->setObjectName("modDetailPanel");
     detailPanel->setMinimumWidth(232);
     auto* detailLayout = new QVBoxLayout(detailPanel);
-    detailLayout->setContentsMargins(20, 20, 20, 20);
+    detailLayout->setContentsMargins(16, 16, 16, 16);
     detailLayout->setSpacing(16);
     details_ = new QScrollArea;
     details_->setObjectName("modDetailScroll");
@@ -154,10 +154,10 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
 
 void ModBrowser::clearDetails() {
     selectedId_ = 0;
-    title_->setText("Find your next favorite.");
+    title_->setText("No mod selected");
     author_->clear();
     metadata_->clear();
-    summary_->setText("Select a mod on the left to see what it adds to your valley.");
+    summary_->setText("Select a mod to view its description and download page.");
     description_->clear();
     detailStatus_->clear();
     for (auto* optional : {author_, metadata_, description_, detailStatus_}) optional->hide();
@@ -190,7 +190,7 @@ void ModBrowser::setListError(const QString& message) {
     // Keep actionable API/connection guidance visible until the user retries.
     search_->setEnabled(false);
     status_->setText(message);
-    title_->setText("Your next adventure can wait.");
+    title_->setText("Mod list unavailable");
     summary_->setText("Once the mod list is available, select a name to explore it here.");
 }
 
