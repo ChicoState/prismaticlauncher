@@ -16,6 +16,9 @@ class ModBrowser : public QWidget {
    public:
     explicit ModBrowser(QWidget* parent = nullptr);
     void beginLoading();
+    void beginPageLoading();
+    void setPageError(const QString& message);
+    void setPagination(int offset, qint64 total, int count, bool loading);
     void setMods(const QVector<NexusModSummary>& mods);
     void setListError(const QString& message);
     void setModDetails(const NexusModDetails& mod);
@@ -23,6 +26,8 @@ class ModBrowser : public QWidget {
 
    signals:
     void refreshRequested();
+    void previousPageRequested();
+    void nextPageRequested();
     // Zero means selection was cleared; the owner should cancel outstanding details.
     void modSelected(qint64 id);
 
@@ -45,6 +50,9 @@ class ModBrowser : public QWidget {
     QLabel* description_;
     QLabel* detailStatus_;
     QScrollArea* details_;
+    QLabel* pageCount_;
+    QPushButton* previous_;
+    QPushButton* next_;
     QPushButton* refresh_;
     QPushButton* download_;
 };

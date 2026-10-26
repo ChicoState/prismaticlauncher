@@ -48,12 +48,14 @@ To make a live, read-only request to Nexus Mods, supply an API key only through 
 NEXUS_API_KEY='your-api-key' ./build/dev/nexus-fetch-list
 ```
 
-To browse the same list in the desktop UI, launch `./build/dev/bin/prismatic-launch`
+To browse mods in the desktop UI, launch `./build/dev/bin/prismatic-launch`
 with `NEXUS_API_KEY` set in its environment, then click **Browse Nexus mods** on the
 main library page. Select a name in the left-hand list to see the author, version,
 endorsements, summary, and full details on the right. **Open download page** opens
 the selected mod's Files tab on Nexus Mods; it does not install anything. The list
-contains the ten most recently updated mods. **Refresh** fetches the list again;
+loads 50 mods per page, sorted by latest update. Use **Previous** and **Next** to
+browse more, with a result counter showing the total. The filter searches only
+the current page. **Refresh** returns to the first page;
 **Back to library** returns to your instances. Requests run asynchronously
 and the page reports loading, empty results, and errors. The key is kept in memory
 only; after changing it, restart the launcher. This view does not install mods.

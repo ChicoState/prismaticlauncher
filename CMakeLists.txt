@@ -19,6 +19,7 @@ qt_standard_project_setup()
 
 add_library(nexus_fetch_list STATIC
     src/Nexus_fetchList/Nexus_fetchList.cpp
+    src/Nexus_fetchList/NexusModPages.cpp
     src/Nexus_fetchList/Nexus_fetchList.hpp
 )
 target_include_directories(nexus_fetch_list PUBLIC src/Nexus_fetchList)
@@ -36,6 +37,9 @@ if(BUILD_TESTING)
     add_executable(nexus-fetch-list-test tests/nexus_fetch_list_test.cpp)
     target_link_libraries(nexus-fetch-list-test PRIVATE nexus_fetch_list Qt6::Test)
     add_test(NAME nexus-fetch-list-test COMMAND nexus-fetch-list-test)
+    qt_add_executable(nexus-mod-pages-test tests/nexus_mod_pages_test.cpp)
+    target_link_libraries(nexus-mod-pages-test PRIVATE nexus_fetch_list Qt6::Test)
+    add_test(NAME nexus-mod-pages-test COMMAND nexus-mod-pages-test)
 endif()
 find_package(Qt6 REQUIRED COMPONENTS Widgets)
 qt_standard_project_setup()

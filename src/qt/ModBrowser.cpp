@@ -59,7 +59,7 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     heading->addLayout(headingText, 1);
     refresh_ = new QPushButton("Refresh");
     refresh_->setObjectName("modRefresh");
-    refresh_->setToolTip("Fetch the ten most recently updated Stardew Valley mods.");
+    refresh_->setToolTip("Reload the first page of recently updated Stardew Valley mods.");
     heading->addWidget(refresh_);
     layout->addLayout(heading);
 
@@ -74,8 +74,8 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     masterLayout->setSpacing(12);
     search_ = new QLineEdit;
     search_->setObjectName("modSearch");
-    search_->setPlaceholderText("Filter these mods…");
-    search_->setAccessibleName("Filter recently updated mods by name, author or summary");
+    search_->setPlaceholderText("Filter this page…");
+    search_->setAccessibleName("Filter this page by name, author or summary");
     search_->setClearButtonEnabled(true);
     masterLayout->addWidget(search_);
     count_ = textLabel("RECENTLY UPDATED", "eyebrow");
@@ -88,6 +88,21 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     list_->setTextElideMode(Qt::ElideRight);
     list_->setMinimumHeight(120);
     masterLayout->addWidget(list_, 1);
+    pageCount_ = textLabel("", "modPageCount");
+    pageCount_->setAccessibleName("Mod page results");
+    masterLayout->addWidget(pageCount_);
+    auto* pagination = new QHBoxLayout;
+    pagination->setSpacing(8);
+    previous_ = new QPushButton("Previous");
+    previous_->setObjectName("modPrevious");
+    previous_->setAccessibleName("Previous page of mods");
+    next_ = new QPushButton("Next");
+    next_->setObjectName("modNext");
+    next_->setAccessibleName("Next page of mods");
+    pagination->addWidget(previous_);
+    pagination->addWidget(next_);
+    masterLayout->addLayout(pagination);
+    setPagination(0, 0, 0, false);
     status_ = textLabel("", "modListStatus");
     masterLayout->addWidget(status_);
     splitter->addWidget(master);
@@ -136,6 +151,8 @@ ModBrowser::ModBrowser(QWidget* parent) : QWidget(parent) {
     splitter->setSizes({280, 440});
     layout->addWidget(splitter, 1);
 
+    connect(previous_, &QPushButton::clicked, this, &ModBrowser::previousPageRequested);
+    connect(next_, &QPushButton::clicked, this, &ModBrowser::nextPageRequested);
     connect(refresh_, &QPushButton::clicked, this, &ModBrowser::refreshRequested);
     connect(search_, &QLineEdit::textChanged, this, &ModBrowser::filterMods);
     connect(list_, &QListWidget::currentRowChanged, this, &ModBrowser::selectMod);
@@ -177,7 +194,33 @@ void ModBrowser::beginLoading() {
     status_->setText("Loading recently updated mods…");
 }
 
+void ModBrowser::setPagination(int offset, qint64 total, int count, bool loading) {
+    previous_->setEnabled(!loading && offset > 0);
+    next_->setEnabled(!loading && count > 0 && offset + count < total);
+    pageCount_->setText(count > 0
+        ? QString("%1–%2 of %3 mods").arg(QLocale().toString(offset + 1),
+              QLocale().toString(offset + count), QLocale().toString(total))
+        : QString("0 mods on this page"));
+}
+
+void ModBrowser::beginPageLoading() {
+    refresh_->setEnabled(false);
+    refresh_->setText("Loading…");
+    search_->setEnabled(false);
+    previous_->setEnabled(false);
+    next_->setEnabled(false);
+    status_->setText("Loading mod page…");
+}
+
+void ModBrowser::setPageError(const QString& message) {
+    refresh_->setEnabled(true);
+    refresh_->setText("Refresh");
+    search_->setEnabled(true);
+    status_->setText(message);
+}
+
 void ModBrowser::setMods(const QVector<NexusModSummary>& mods) {
+    clearDetails();
     mods_ = mods;
     refresh_->setEnabled(true);
     refresh_->setText("Refresh");
@@ -209,7 +252,7 @@ void ModBrowser::filterMods() {
     }
     count_->setText(QString("%1 OF %2 MODS").arg(filtered.size()).arg(mods_.size()));
     status_->setText(mods_.isEmpty()      ? "No mods returned. Try refreshing in a moment."
-                     : filtered.isEmpty() ? "No matching mods. Try a different filter."
+                     : filtered.isEmpty() ? "No matching mods on this page. Try a different filter."
                                           : "Select a name to explore.");
     if (!list_->currentItem()) clearDetails();
 }

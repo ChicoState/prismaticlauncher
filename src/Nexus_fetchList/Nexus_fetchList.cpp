@@ -153,21 +153,22 @@ bool parseSummary(const Json& object, NexusModSummary* summary, QString* error)
 
 } // namespace
 
-NexusModClient::NexusModClient(QString apiKey, QObject* parent)
+NexusModClient::NexusModClient(QString apiKey, QObject* parent, QNetworkAccessManager* networkManager)
     : QObject(parent)
-    , networkManager_(new QNetworkAccessManager(this))
+    , networkManager_(networkManager ? networkManager : new QNetworkAccessManager(this))
     , apiKey_(std::move(apiKey))
 {
     qRegisterMetaType<NexusModSummary>();
     qRegisterMetaType<QVector<NexusModSummary>>();
     qRegisterMetaType<NexusModDetails>();
     qRegisterMetaType<NexusApiError>();
+    qRegisterMetaType<NexusModPage>();
 }
 
 QNetworkReply* NexusModClient::fetchModList()
 {
     const QUrl url(QString::fromLatin1(kApiBaseUrl) + QStringLiteral("latest_updated.json"));
-    QNetworkReply* reply = get(url);
+    QNetworkReply* reply = request(url);
     if (reply != nullptr) {
         connect(reply, &QNetworkReply::finished, this, [this, reply] { handleModListReply(reply); });
     }
@@ -182,7 +183,7 @@ QNetworkReply* NexusModClient::fetchModDetails(qint64 modId)
     }
 
     const QUrl url(QString::fromLatin1(kApiBaseUrl) + QString::number(modId) + QStringLiteral(".json"));
-    QNetworkReply* reply = get(url);
+    QNetworkReply* reply = request(url);
     if (reply != nullptr) {
         connect(reply, &QNetworkReply::finished, this, [this, reply] { handleModDetailsReply(reply); });
     }
@@ -289,7 +290,7 @@ std::optional<NexusModDetails> NexusModClient::parseModDetailsResponse(const QBy
     }
 }
 
-QNetworkReply* NexusModClient::get(const QUrl& url)
+QNetworkReply* NexusModClient::request(const QUrl& url, const QByteArray& body)
 {
     if (apiKey_.trimmed().isEmpty()) {
         emit requestFailed({QStringLiteral("A Nexus API key is required."), 0});
@@ -301,6 +302,10 @@ QNetworkReply* NexusModClient::get(const QUrl& url)
     request.setRawHeader("User-Agent", "PrismaticLauncher/0.0.0");
     request.setAttribute(QNetworkRequest::RedirectPolicyAttribute, QNetworkRequest::ManualRedirectPolicy);
     request.setTransferTimeout(30'000);
+    if (!body.isEmpty()) {
+        request.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+        return networkManager_->post(request, body);
+    }
     return networkManager_->get(request);
 }
 

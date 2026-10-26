@@ -330,3 +330,16 @@ QPushButton#modDownload:focus { border-color: #24343d; }
 QPushButton#modDownload:disabled { background: #e8eaeb; color: #747b80; border-color: #d7dbdd; }
 QSplitter#modSplitter::handle { background: #f1f2f3; }
 QSplitter#modSplitter::handle:hover { background: #d8dcde; }
+
+QLabel#modPageCount { color: #626c73; font-size: 12px; }
+QPushButton#modPrevious, QPushButton#modNext {
+    padding: 6px 8px;
+    border: 1px solid #cbd0d3;
+    border-radius: 4px;
+    background: #ffffff;
+}
+QPushButton#modPrevious:hover, QPushButton#modNext:hover { background: #e8f2f6; border-color: #4b9dcc; }
+QPushButton#modPrevious:focus, QPushButton#modNext:focus { border-color: #805900; }
+QPushButton#modPrevious:disabled, QPushButton#modNext:disabled {
+    background: #e8eaeb; color: #747b80; border-color: #d7dbdd;
+}

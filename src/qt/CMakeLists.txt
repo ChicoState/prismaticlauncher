@@ -23,6 +23,11 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(mod-pagination-tests ../../tests/ui/ModPaginationTests.cpp)
+    target_link_libraries(mod-pagination-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME mod-pagination-tests COMMAND mod-pagination-tests)
+    set_tests_properties(mod-pagination-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     qt_add_executable(launcher-ui-tests ../../tests/ui/LauncherTests.cpp)
     target_link_libraries(launcher-ui-tests PRIVATE launcher-ui Qt6::Test nexus_fetch_list)
     add_test(NAME launcher-ui-tests COMMAND launcher-ui-tests)

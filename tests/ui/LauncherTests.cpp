@@ -92,7 +92,7 @@ class LauncherTests : public QObject {
         const auto mods = NexusModClient::parseModListResponse(
             R"([{"mod_id":42,"name":"<b>Valley Expanded</b>","author":"A farmer","version":"1.2","summary":"More places to explore."}])");
         QVERIFY(mods.has_value());
-        emit client->modListFetched(*mods);
+        emit client->modPageFetched({*mods, mods->size(), 0});
         QCOMPARE(list->count(), 1);
         QCOMPARE(list->item(0)->text(), QString("<b>Valley Expanded</b>"));
         list->setCurrentRow(0);
@@ -117,7 +117,7 @@ class LauncherTests : public QObject {
         if (!screenshots.isEmpty()) {
             QVERIFY(window.grab().save(screenshots + "/nexus-minimum-sample.png"));
         }
-        emit client->modListFetched({});
+        emit client->modPageFetched({{}, 0, 0});
         QCOMPARE(list->count(), 0);
         QVERIFY(status->text().contains("No mods"));
         QVERIFY(!download->isEnabled());
@@ -274,6 +274,7 @@ class LauncherTests : public QObject {
         auto* browser = instanceWindow->findChild<ModBrowser*>();
         QVERIFY(browser);
         browser->setMods(sampleMods());
+        browser->setPagination(0, 3, 3, false);
         browser->findChild<QListWidget*>("modList")->setCurrentRow(0);
         NexusModDetails details;
         static_cast<NexusModSummary&>(details) = sampleMods().first();
@@ -318,6 +319,7 @@ class LauncherTests : public QObject {
                 browser->findChildren<NexusModClient*>(QString(), Qt::FindDirectChildrenOnly)
                     .size();
             browser->setMods(sampleMods());
+            browser->setPagination(0, 3, 3, false);
             auto* list = browser->findChild<QListWidget*>("modList");
             list->setCurrentRow(0);
             auto clients =
