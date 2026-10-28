@@ -120,7 +120,7 @@ PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview ctest --preset dev --output-on-fail
 ## CI and releases
 
 Pull requests run Linux Docker validation, infrastructure checks, formatting, static analysis, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8.3, build the launcher, and run the offscreen Qt tests.
-Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3; Windows then activates its MSVC 2022 x64 build environment to match the Qt kit. Product targets will extend those validations.
+Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. The Linux image installs `nlohmann-json3-dev` alongside its Qt development packages. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3 and install `nlohmann-json` with the repository-pinned vcpkg revision in classic mode, exposing its prefix through `nlohmann_json_ROOT`. This keeps the prebuilt Qt SDK while supplying the header-only JSON dependency. Windows activates its MSVC 2022 x64 build environment to match the Qt kit. Product targets will extend those validations.
 
 Tags matching `v*` start the guarded GitHub Release workflow. It intentionally fails before publishing until product-owned `packaging/` scripts exist and the protected `release` environment contains the required Apple notarization configuration. Future releases will publish portable archives: Windows ZIP, macOS ZIP, and Linux `tar.gz`, along with SHA-256 checksums.
 
