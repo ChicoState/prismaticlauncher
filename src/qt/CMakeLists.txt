@@ -1,6 +1,7 @@
 # Keep windows, dialogs, configuration, and shared resources in a library usable by the app and tests.
 qt_add_library(launcher-ui STATIC
     LauncherConfig.cpp LauncherConfig.h
+    LogWindow.cpp LogWindow.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
     AddInstanceDialog.ui

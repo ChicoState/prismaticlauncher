@@ -26,7 +26,15 @@ Read `documents/infrastructure_plan.md`, this file, and the relevant `.agents/sk
 
 Use `refine-task` when asked to evaluate or rewrite a draft task prompt. It prepares the prompt without implementing its contents; it is not a mandatory step for ordinary coding requests.
 
-Use `feature-workflow` for end-to-end application feature requests covering refinement, planning, implementation, tests, and independent review. Its coordinator delegates focused assignments to `feature-planner`, `feature-implementer`, `feature-tester`, and `feature-reviewer` when available. Keep plan-only and prompt-only requests within their stated scope. Follow [the workflow skill](.agents/skills/feature-workflow/SKILL.md) and use [the request template](documents/templates/feature-request.md). Workers do not recursively delegate. Do not stage, commit, push, publish, or deploy unless the user separately requests it.
+Use `feature-workflow` for end-to-end application feature requests covering refinement, planning, implementation, tests, and independent review. Its coordinator delegates focused assignments to `feature-planner`, `feature-implementer`, `feature-tester`, and `feature-reviewer` when available. Keep plan-only and prompt-only requests within their stated scope. Follow [the workflow skill](.agents/skills/feature-workflow/SKILL.md) and use [the request template](documents/templates/feature-request.md).
+
+Prefer visible Sessions/chat delegation when the client exposes `create_session`; follow the workflow skill for tool selection and coordination. Title each assignment `<role> — <assignment>`, share its returned open link, and have each worker identify its role/name, selected skills with links to `SKILL.md`, and assigned files with read-only or writer scope in its first commentary. Do not imply that the UI automatically shows active skills. Workers do not recursively delegate. Do not stage, commit, push, publish, or deploy unless the user separately requests it.
+
+## Development environment
+
+- This checkout lives in the Ubuntu WSL distribution. Run repository commands with Bash inside WSL, not PowerShell against the `\\wsl.localhost` UNC path.
+- Open the checkout through VS Code Remote - WSL so agent sessions inherit `/home/jpste/Git/prismaticlauncher` and Linux tools. A Windows-side window opened directly on the UNC path selects a Windows agent host and can fall back to PowerShell.
+- From WSL, use the `code` CLI to open files or the checkout in the Windows VS Code client. Workspace settings auto-approve the `code` and `code.exe` bridge commands; this does not grant blanket approval to other terminal commands.
 
 ## Boundaries
 

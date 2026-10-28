@@ -55,6 +55,9 @@ def render_agent(source: Path) -> str:
         "[local skills](../../.agents/skills/using-agent-skills/SKILL.md) when applicable. "
         "Use the actual repository structure and technology stack; any framework or path "
         "examples in the role below must be checked against this checkout.\n\n"
+        "Run repository commands in Ubuntu WSL with Bash; do not use PowerShell for "
+        "repository work. Keep the Windows VS Code client available from WSL through "
+        "the `code` CLI, which is the supported cross-OS editor bridge.\n\n"
         f"{instructions}\n"
     )
 

@@ -10,6 +10,7 @@ import unittest
 
 
 SCRIPT = Path(__file__).resolve().parents[2] / "scripts" / "sync-vscode-agents.py"
+REPOSITORY_ROOT = SCRIPT.parents[1]
 
 
 class CustomizationExportTests(unittest.TestCase):
@@ -68,6 +69,17 @@ class CustomizationExportTests(unittest.TestCase):
         self.assertTrue(canonical.is_file())
         self.assertTrue((canonical.parent / "references/fixture.txt").is_file())
         self.assertEqual(self.run_sync("--check").returncode, 0)
+
+    def test_exports_require_wsl_for_repository_commands(self):
+        """Every generated role keeps repository commands out of Windows PowerShell."""
+        result = self.run_sync()
+        self.assertEqual(result.returncode, 0, result.stderr)
+        exported = self.root / ".github/agents/coordinator.agent.md"
+        instructions = exported.read_text(encoding="utf-8")
+        self.assertIn("Run repository commands in Ubuntu WSL with Bash", instructions)
+        self.assertIn("do not use PowerShell for repository work", instructions)
+        self.assertIn("Windows VS Code client available from WSL", instructions)
+        self.assertIn("through the `code` CLI", instructions)
 
     def test_check_detects_a_missing_native_agent_export(self):
         """Deleting a worker export causes verification to fail."""
@@ -134,6 +146,24 @@ class CustomizationExportTests(unittest.TestCase):
                     f"---\nname: example\ndescription: {value}\n---\nBody.\n",
                 )
                 self.assertNotEqual(self.run_sync().returncode, 0)
+
+
+class WorkspaceAgentEnvironmentTests(unittest.TestCase):
+    """Verify the shared VS Code workspace selects and trusts the WSL bridge."""
+
+    def test_workspace_defaults_to_wsl_and_approves_vscode_bridge(self):
+        """Agents use Ubuntu WSL while VS Code bridge calls need no confirmation."""
+        settings_path = REPOSITORY_ROOT / ".vscode/settings.json"
+        settings = json.loads(settings_path.read_text(encoding="utf-8"))
+
+        self.assertEqual(
+            settings["terminal.integrated.defaultProfile.windows"],
+            "Ubuntu (WSL)",
+        )
+        self.assertEqual(
+            settings["chat.tools.terminal.autoApprove"],
+            {"code": True, "code.exe": True},
+        )
 
 
 if __name__ == "__main__":

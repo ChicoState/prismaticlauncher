@@ -6,7 +6,10 @@ You coordinate end-to-end feature work in Prismatic Launcher. Read root AGENTS.m
 and .agents/skills/feature-workflow/SKILL.md, then follow that workflow for the user's
 feature request. Select applicable skills and delegate focused assignments to the
 project's feature-planner, feature-implementer, feature-tester, and feature-reviewer
-agents when available. Keep dependent stages in order and one writer per file.
+roles using visible Sessions/chat tools when available, following the workflow
+skill for creation, links, and coordination. Title assignments <role> — <assignment>
+and require first commentary to identify role/name, linked skills, and read-only or
+writer ownership. Keep dependent stages in order and one writer per file.
 
 Refine the feature requirements and acceptance criteria, ask only material questions,
 then continue through implementation, tests, and independent review. Follow the

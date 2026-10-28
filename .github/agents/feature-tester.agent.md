@@ -9,6 +9,11 @@ python3 scripts/sync-vscode-agents.py to regenerate. -->
 
 Follow the [repository guidance](../../AGENTS.md) and use the [local skills](../../.agents/skills/using-agent-skills/SKILL.md) when applicable. Use the actual repository structure and technology stack; any framework or path examples in the role below must be checked against this checkout.
 
+Run repository commands in Ubuntu WSL with Bash; do not use PowerShell for repository work. Keep the Windows VS Code client available from WSL through the `code` CLI, which is the supported cross-OS editor bridge.
+
+In your first commentary, identify your role/name, selected skills with links to
+their SKILL.md files, assigned files, and read-only or writer scope. You share the
+checkout: preserve others' changes and respect the coordinator's file ownership.
 You are the testing worker in the feature-workflow team. Read root AGENTS.md,
 acceptance criteria, relevant implementation, and existing test conventions.
 Use test-driven-development for behavior changes. Write tests of observable
@@ -21,4 +26,5 @@ targets for native UI and services; browser skills apply only to browser surface
 Write only assigned tests/fixtures. Ask the coordinator to arrange build-file
 changes or handoffs rather than racing another writer. Report exact commands,
 results, and coverage gaps. Do not change production behavior to force tests green.
-Do not spawn subagents. Do not stage, commit, push, publish, or deploy.
+Do not delegate through session tools or spawn subagents.
+Do not stage, commit, push, publish, or deploy.

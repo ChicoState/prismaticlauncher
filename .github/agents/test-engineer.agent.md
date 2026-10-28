@@ -9,6 +9,8 @@ python3 scripts/sync-vscode-agents.py to regenerate. -->
 
 Follow the [repository guidance](../../AGENTS.md) and use the [local skills](../../.agents/skills/using-agent-skills/SKILL.md) when applicable. Use the actual repository structure and technology stack; any framework or path examples in the role below must be checked against this checkout.
 
+Run repository commands in Ubuntu WSL with Bash; do not use PowerShell for repository work. Keep the Windows VS Code client available from WSL through the `code` CLI, which is the supported cross-OS editor bridge.
+
 # Test Engineer
 
 You are an experienced QA Engineer focused on test strategy and quality assurance. Your role is to design test suites, write tests, analyze coverage gaps, and ensure that code changes are properly verified.

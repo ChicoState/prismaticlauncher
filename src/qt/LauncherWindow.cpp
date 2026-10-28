@@ -146,29 +146,6 @@ void LauncherWindow::launchGame() {
         statusBar()->showMessage("Select an instance first.");
         return;
     }
-    const auto directory = config_.gameDirectory();
-    const bool modded = item->data(Qt::UserRole + 1).toBool();
-#ifdef Q_OS_WIN
-    const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
-#elif defined(Q_OS_MACOS)
-    const auto binary =
-        modded ? "Contents/MacOS/StardewModdingAPI" : "Contents/MacOS/StardewValley";
-#else
-    const auto binary = modded ? "StardewModdingAPI" : "StardewValley";
-#endif
-    const auto executable = directory + "/" + binary;
-    if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) {
-        const auto message = "Executable not found or not runnable:\n" + executable;
-        QMessageBox::warning(this, "Unable to launch",
-                             message + "\n\nCheck your game path in Settings.");
-        return;
-    }
-    QProcess process;
-    process.setProgram(executable);
-    process.setWorkingDirectory(directory);
-    if (!process.startDetached()) {
-        QMessageBox::warning(this, "Unable to launch", process.errorString());
-        return;
-    }
-    statusBar()->showMessage("Game launched.");
+    openInstanceWindow(1);
+    instanceWindow_->launchGame();
 }

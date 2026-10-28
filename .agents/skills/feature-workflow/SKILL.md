@@ -33,7 +33,7 @@ user wants a reusable starting request.
 
 ## Coordinate the stages
 
-Invoking this workflow requests delegation. Use available native Codex agents from
+Invoking this workflow requests delegation. Use the role instructions from
 `.codex/agents/` for focused assignments:
 
 | Agent | Responsibility | Writes |
@@ -53,9 +53,12 @@ Invoking this workflow requests delegation. Use available native Codex agents fr
    changes need appropriate validation, not artificial failing tests.
 3. Give each assignment the refined scope, acceptance criteria, relevant context,
    permitted files, and expected output. Keep one writer per file. Run only
-   independent work in parallel, with at most three active subagents. Close or
-   reuse finished agents; stages that depend on earlier results run in order.
-   The coordinator owns delegation; workers must not recursively spawn teams.
+   independent work in parallel, with at most three active workers or the lower
+   client limit. Reuse finished workers for related assignments; stages that depend
+   on earlier results run in order. Tell workers they share the checkout, must
+   preserve others' changes, and need an explicit handoff before editing another
+   writer's files. The coordinator owns delegation; workers must not recursively
+   delegate through either session tools or embedded subagents.
 4. When the implementation is ready, send a fresh reviewer the requirements,
    changed paths/diff, and verification evidence. Have the implementer address
    actionable findings, then rerun the affected checks and request focused review
@@ -66,11 +69,29 @@ Use an additional specialist assignment only when a concrete risk needs it, for
 example a filesystem security review or measured performance investigation. The
 existing `.agents/*.toml` personas remain available for separate specialized tasks.
 
-If named agents are not exposed by the current harness, use available subagents
-with the corresponding role instructions from `.codex/agents/`. If delegation is
-unavailable, disclose that limitation and carry out the stages in the main session;
-do not claim an independent review occurred. Do not change user-wide settings to
-force agent availability.
+### Visible delegation and worker identity
+
+- Prefer `create_session` when exposed by the client. Omit `relationship` (the
+  default is `currentSession`) for work contributing to this feature; do not use
+  `independent`. Title each chat `<role> — <assignment>` and provide the role's
+  instructions, selected skills, scope, ownership, and expected output in its
+  initial prompt. A title names the assignment; it does not select a custom agent.
+- Share the returned user-openable link. Retain the session/chat identifier for
+  `send_message` and `get_session_context`; use `list_sessions` for status and
+  returned `openLink` values. Reuse related chats, queue separate assignments,
+  and use `delivery: "steer"` only to update active work. Sending is asynchronous:
+  read the completed result before dispatching dependent work.
+- Every worker's first commentary must identify its role/name, selected skills
+  with links to their `SKILL.md` files, owned files, and read-only or writer scope.
+  Users can inspect these details in the linked chat; do not claim that the UI
+  automatically exposes an active skill inventory.
+- `collaboration.spawn_agent` creates embedded workers rather than user-openable
+  Sessions/chat tabs. If visible-session tools are unavailable, disclose that
+  limitation before using available embedded agents with the same role instructions
+  and ownership rules. Do not promise tab visibility across clients. If neither
+  mechanism is available, perform the stages in the main session and do not claim
+  an independent review. Do not invent configuration keys or change user-wide
+  settings to force visibility.
 
 ## Verify and hand off
 

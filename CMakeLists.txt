@@ -36,6 +36,12 @@ if(BUILD_TESTING)
     # Let widget tests run on CI machines without a desktop display.
     set_tests_properties(launcher-ui-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
 
+    # Exercise console parsing and filtering without launching a real game.
+    qt_add_executable(log-window-tests tests/ui/LogWindowTests.cpp)
+    target_link_libraries(log-window-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME log-window-tests COMMAND log-window-tests)
+    set_tests_properties(log-window-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     # Test SMAPI services independently of the UI; this suite needs no widget display backend.
     qt_add_executable(smapi-tests tests/smapi/SmapiTests.cpp)
     target_link_libraries(smapi-tests PRIVATE launcher-smapi Qt6::Test)

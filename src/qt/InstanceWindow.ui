@@ -70,10 +70,9 @@ Local installation</string></property></widget></item>
         <widget class="QWidget" name="logsPage">
          <layout class="QVBoxLayout" name="logsLayout">
           <property name="leftMargin"><number>24</number></property><property name="topMargin"><number>24</number></property><property name="rightMargin"><number>24</number></property><property name="bottomMargin"><number>24</number></property>
-          <item><widget class="QLabel" name="logsTitle"><property name="text"><string>Launcher activity</string></property></widget></item>
-          <item><widget class="QLabel" name="logsDescription"><property name="text"><string>Activity from this session. Game and SMAPI logs are not captured yet.</string></property></widget></item>
-          <item><widget class="QLineEdit" name="logFilter"><property name="accessibleName"><string>Find in launcher activity</string></property><property name="placeholderText"><string>Find in activity…</string></property></widget></item>
-          <item><widget class="QPlainTextEdit" name="logs"><property name="accessibleName"><string>Launcher activity log</string></property><property name="readOnly"><bool>true</bool></property></widget></item>
+          <item><widget class="QLabel" name="logsTitle"><property name="text"><string>Live console</string></property></widget></item>
+          <item><widget class="QLabel" name="logsDescription"><property name="text"><string>View live game, SMAPI, and mod output. Filter by minimum severity or search by source and message.</string></property></widget></item>
+          <item><widget class="QPushButton" name="openLogs"><property name="text"><string>Open log window</string></property></widget></item>
          </layout>
         </widget>
         <widget class="QWidget" name="settingsPage">

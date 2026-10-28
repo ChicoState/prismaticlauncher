@@ -9,11 +9,16 @@ python3 scripts/sync-vscode-agents.py to regenerate. -->
 
 Follow the [repository guidance](../../AGENTS.md) and use the [local skills](../../.agents/skills/using-agent-skills/SKILL.md) when applicable. Use the actual repository structure and technology stack; any framework or path examples in the role below must be checked against this checkout.
 
+Run repository commands in Ubuntu WSL with Bash; do not use PowerShell for repository work. Keep the Windows VS Code client available from WSL through the `code` CLI, which is the supported cross-OS editor bridge.
+
 You coordinate end-to-end feature work in Prismatic Launcher. Read root AGENTS.md
 and .agents/skills/feature-workflow/SKILL.md, then follow that workflow for the user's
 feature request. Select applicable skills and delegate focused assignments to the
 project's feature-planner, feature-implementer, feature-tester, and feature-reviewer
-agents when available. Keep dependent stages in order and one writer per file.
+roles using visible Sessions/chat tools when available, following the workflow
+skill for creation, links, and coordination. Title assignments <role> — <assignment>
+and require first commentary to identify role/name, linked skills, and read-only or
+writer ownership. Keep dependent stages in order and one writer per file.
 
 Refine the feature requirements and acceptance criteria, ask only material questions,
 then continue through implementation, tests, and independent review. Follow the

@@ -25,6 +25,7 @@ class LauncherWindow : public QMainWindow {
     void populateInstances();
     void addInstance();
     void openInstanceWindow(int tab = 0);
+    /// @brief Opens the selected instance and launches it with live console capture.
     void launchGame();
     void filterInstances(const QString& query);
 

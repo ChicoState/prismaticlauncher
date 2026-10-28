@@ -45,6 +45,10 @@ ctest --preset dev --output-on-failure
 ./build/dev/bin/prismatic-launch
 ```
 
+For one-step build, test, and launch on Linux or WSL, run `./scripts/build-and-run.sh` from the repository root. The script locates the checkout itself, uses two build jobs, and stops if configuration, compilation, or tests fail. Extra arguments are passed to the application, for example `./scripts/build-and-run.sh --config /absolute/path/launcher.ini`.
+
+On Windows, double-click `scripts/build-and-run.cmd` in this checkout. It runs the same helper in the Ubuntu WSL distribution, waits for the app to close, and keeps the terminal open on failure. It requires the existing WSL development prerequisites; it does not install tools.
+
 For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
 
 On Ubuntu with `qt6-base-dev`, CMake 3.28+, a C++ compiler, and Make installed, Ninja is optional with this alternate build:
@@ -58,7 +62,7 @@ ctest --test-dir build/local --output-on-failure
 
 Linux CI runs the `coverage` preset, then enforces the 60% line-coverage floor on `src/qt/LauncherConfig.cpp`. Shell scripts use LF line endings (enforced by `.gitattributes`) so Docker and Linux runners can execute them after cross-platform checkouts.
 
-The default build also compiles all SMAPI sources. With `BUILD_TESTING=ON` (the default), CMake requires Qt Test and registers `launcher-ui-tests` (offscreen) and `smapi-tests` with CTest. Pass `-DBUILD_TESTING=OFF` when configuring to build without the test executables.
+The default build also compiles all SMAPI sources. With `BUILD_TESTING=ON` (the default), CMake requires Qt Test and registers `launcher-ui-tests` and `log-window-tests` (offscreen), plus `smapi-tests`, with CTest. Pass `-DBUILD_TESTING=OFF` when configuring to build without the test executables.
 
 Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; macOS builds produce `bin/prismatic-launch.app`. Development executables still require the Qt runtime.
 
@@ -73,7 +77,7 @@ Settings → Save game path writes a per-user INI override using [Qt's settings 
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs → Open log window shows live game and mod output from either Play button. Each line includes severity and a bracketed mod/source name; untagged startup output uses Game. A minimum-severity slider and text search filter the latest 5,000 retained lines without discarding hidden entries. Closing the console preserves its history and leaves the game running. Modded launches pass SMAPI's process-local `--developer-mode` option to include full severity stamps and trace output; no SMAPI settings file is changed. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
@@ -108,6 +112,14 @@ PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview QT_QPA_PLATFORM=offscreen ./build/d
 ## VS Code custom agents
 
 The built-in VS Code Agents window can use the twelve `.agent.md` files in `.github/agents/` as roles with the Copilot or Codex session target. The source roles live in `.agents/*.toml` and `.codex/agents/*.toml`; TOML files alone are not a supported format for this picker. Skills live once in `.agents/skills/`, which the Customizations editor and native Codex can discover. Skills are separate from selectable agent roles.
+
+This repository is developed in the Ubuntu WSL distribution. Open it as a Remote - WSL workspace, rather than opening `\\wsl.localhost\Ubuntu\home\jpste\Git\prismaticlauncher` as a Windows folder. Either run `code .` from `/home/jpste/Git/prismaticlauncher` in WSL or run this from a Windows prompt:
+
+```powershell
+code --folder-uri vscode-remote://wsl+Ubuntu/home/jpste/Git/prismaticlauncher
+```
+
+The remote workspace gives agents a Bash terminal and the Linux repository path by default. The shared workspace settings also select the `Ubuntu (WSL)` terminal as a fallback for Windows-hosted windows and auto-approve only the `code` and `code.exe` commands used to reach the Windows VS Code client from WSL. Start a new agent session after reopening the workspace so it receives the corrected environment.
 
 1. Open this repository folder in VS Code. When working in WSL, open the WSL checkout as the workspace.
 2. Select the Copilot or Codex harness/session target. Run **Chat: Open Customizations**, then select **Agents**; in the Agents window, use **Customizations → Agents**.
