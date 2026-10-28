@@ -122,15 +122,15 @@ class LauncherTests : public QObject {
         QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
     }
 
-    void launcherSettingsOpensSmapiWindow() {
+    void smapiButtonOpensSmapiWindow() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
         QVERIFY(config.saveGameDirectory(temp.path()));
         LauncherWindow window(config.filePath());
 
-        auto* settingsButton = window.findChild<QPushButton*>("settings");
-        QVERIFY(settingsButton);
-        settingsButton->click();
+        auto* smapiButton = window.findChild<QPushButton*>("smapi");
+        QVERIFY(smapiButton);
+        smapiButton->click();
         auto* smapiWindow = window.findChild<SmapiWindow*>();
         QVERIFY(smapiWindow);
         QVERIFY(smapiWindow->isVisible());
