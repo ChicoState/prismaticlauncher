@@ -7,7 +7,7 @@ qt_add_library(launcher-ui STATIC
 
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(launcher-ui PUBLIC Qt6::Widgets)
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack)
 qt_add_resources(launcher-ui ui-resources
     PREFIX "/ui"
     FILES style.qss config/defaults.ini

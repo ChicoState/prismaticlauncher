@@ -15,6 +15,7 @@ include(CTest)
 find_package(Qt6 REQUIRED COMPONENTS Test Widgets)
 qt_standard_project_setup()
 
+add_subdirectory(src/farmpack)
 add_subdirectory(src/qt)
 
 if(BUILD_TESTING)
@@ -27,4 +28,8 @@ if(BUILD_TESTING)
     set_tests_properties(launcher-ui-tests PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )
+
+    qt_add_executable(farmpack-tests tests/farmpack/FarmPackTests.cpp)
+    target_link_libraries(farmpack-tests PRIVATE farmpack Qt6::Test)
+    add_test(NAME farmpack-tests COMMAND farmpack-tests)
 endif()

@@ -4,4 +4,10 @@
         <file alias="settings.png">resources/cogwheel.png</file>
         <file alias="logo.png">resources/logo.png</file>
     </qresource>
+    <qresource prefix="/farmpack">
+        <file alias="manifest.json">chickens/manifest.json</file>
+        <file alias="default.png">chickens/default.png</file>
+        <file alias="spring.png">chickens/spring.png</file>
+        <file alias="summer.png">chickens/summer.png</file>
+    </qresource>
 </RCC>
