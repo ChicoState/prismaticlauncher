@@ -1,10 +1,5 @@
 #include "LauncherWindow.h"
 
-#include "InstanceWindow.h"
-#include "SmapiWindow.h"
-#include "ui_AddInstanceDialog.h"
-#include "ui_LauncherWindow.h"
-
 #include <QDialog>
 #include <QDialogButtonBox>
 #include <QFileInfo>
@@ -13,8 +8,14 @@
 #include <QPainter>
 #include <QProcess>
 #include <QPushButton>
-#include <QStatusBar>
 #include <QResource>
+#include <QStatusBar>
+
+#include "InstanceWindow.h"
+#include "SmapiDetector.h"
+#include "SmapiWindow.h"
+#include "ui_AddInstanceDialog.h"
+#include "ui_LauncherWindow.h"
 
 const int INSTANCE_WIDTH = 146;
 const int INSTANCE_HEIGHT = 162;
@@ -58,20 +59,21 @@ LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
-    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
-            &LauncherWindow::filterInstances);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
-    connect(ui_->editInstance, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
-    connect(ui_->instances, &QListWidget::itemActivated, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->instances, &QListWidget::itemActivated, this, [this] { openInstanceWindow(); });
     connect(ui_->instances, &QListWidget::itemDoubleClicked, this,
             [this] { openInstanceWindow(); });
 }
 
 void LauncherWindow::openSmapiWindow() {
-    if (!smapiWindow_) smapiWindow_ = new SmapiWindow(this);
+    if (!smapiWindow_) {
+        smapiWindow_ = new SmapiWindow(config_.gameDirectory(), this);
+    } else {
+        smapiWindow_->setGameDirectory(config_.gameDirectory());
+    }
     smapiWindow_->show();
     smapiWindow_->raise();
     smapiWindow_->activateWindow();
@@ -97,15 +99,15 @@ void LauncherWindow::addInstance() {
     Ui::AddInstanceDialog dialogUi;
     dialogUi.setupUi(&dialog);
     dialogUi.buttons->button(QDialogButtonBox::Ok)->setText("Create instance");
-    dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-        !dialogUi.name->text().trimmed().isEmpty());
-    connect(dialogUi.name, &QLineEdit::textChanged, &dialog,
-            [&dialogUi](const QString& value) {
-                dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-                    !value.trimmed().isEmpty());
-            });
+    dialogUi.buttons->button(QDialogButtonBox::Ok)
+        ->setEnabled(!dialogUi.name->text().trimmed().isEmpty());
+    connect(dialogUi.name, &QLineEdit::textChanged, &dialog, [&dialogUi](const QString& value) {
+        dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
+    });
 
-    if (dialog.exec() != QDialog::Accepted) {return;}
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
@@ -155,6 +157,14 @@ void LauncherWindow::launchGame() {
     }
     const auto directory = config_.gameDirectory();
     const bool modded = item->data(Qt::UserRole + 1).toBool();
+    if (modded) {
+        const auto smapi = SmapiDetector().inspect(directory);
+        if (!smapi.isInstalled()) {
+            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
+            QMessageBox::warning(this, "Unable to launch SMAPI", message);
+            return;
+        }
+    }
 #ifdef Q_OS_WIN
     const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
 #elif defined(Q_OS_MACOS)

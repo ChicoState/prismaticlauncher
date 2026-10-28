@@ -124,7 +124,9 @@ class LauncherTests : public QObject {
 
     void launcherSettingsOpensSmapiWindow() {
         QTemporaryDir temp;
-        LauncherWindow window(temp.filePath("launcher.ini"));
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
 
         auto* settingsButton = window.findChild<QPushButton*>("settings");
         QVERIFY(settingsButton);
@@ -133,6 +135,9 @@ class LauncherTests : public QObject {
         QVERIFY(smapiWindow);
         QVERIFY(smapiWindow->isVisible());
         QCOMPARE(smapiWindow->windowTitle(), QString("SMAPI Settings"));
+        QVERIFY(smapiWindow->findChild<QLabel*>("stateLabel")
+                    ->text()
+                    .contains("not installed", Qt::CaseInsensitive));
     }
 
     void missingExecutable() {
@@ -150,6 +155,48 @@ class LauncherTests : public QObject {
         for (auto* button : window.findChildren<QPushButton*>()) {
             if (button->text() == "▶  Play") button->click();
         }
+        QVERIFY(warningShown);
+    }
+
+    void moddedLibraryLaunchRequiresSmapi() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
+        auto* item = window.findChild<QListWidget*>("instances")->currentItem();
+        item->setData(Qt::UserRole + 1, true);
+
+        bool warningShown = false;
+        QTimer::singleShot(0, &window, [&warningShown] {
+            if (auto* warning = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                warningShown = warning->text().contains("SMAPI is not installed");
+                warning->accept();
+            }
+        });
+        for (auto* button : window.findChildren<QPushButton*>()) {
+            if (button->text() == "▶  Play") button->click();
+        }
+        QVERIFY(warningShown);
+    }
+
+    void moddedInstanceLaunchRequiresSmapi() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
+        window.findChild<QPushButton*>("editInstance")->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        instanceWindow->findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
+
+        bool warningShown = false;
+        QTimer::singleShot(0, instanceWindow, [&warningShown] {
+            if (auto* warning = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                warningShown = warning->text().contains("SMAPI is not installed");
+                warning->accept();
+            }
+        });
+        instanceWindow->findChild<QPushButton*>("playDetailInstance")->click();
         QVERIFY(warningShown);
     }
 

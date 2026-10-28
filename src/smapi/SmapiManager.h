@@ -2,49 +2,42 @@
 #ifndef SMAPI_MANAGER
 #define SMAPI_MANAGER
 
+#include <QString>
 #include <memory>
 
-#include <QString>
-
-#include "SmapiInstaller.h"
+#include "SmapiDetector.h"
 #include "SmapiLauncher.h"
 
-enum class LaunchStatus {
-    Success,
-    SmapiNotInstalled,
-    LaunchFailed,
-    UnsupportedPlatform
-};
+enum class LaunchStatus { Success, SmapiNotInstalled, LaunchFailed, UnsupportedPlatform };
 
 /*
-* Describes the result of launching SMAPI
-*/
+ * Describes the result of launching SMAPI
+ */
 struct LaunchResult {
     LaunchStatus status;
     QString message;
 
     /*
-    * Returns if the launch has succeeded
-    */
-    [[nodiscard]] bool succeeded() const {
-        return status == LaunchStatus::Success;
-    }
+     * Returns if the launch has succeeded
+     */
+    [[nodiscard]] bool succeeded() const { return status == LaunchStatus::Success; }
 };
 
 /*
-* Manages SMAPI installation and launching by using the respective classes
-*/
+ * Inspects the user's SMAPI installation and launches the modded game.
+ */
 class SmapiManager {
-public:
-    SmapiManager(std::unique_ptr<SmapiInstaller> installer, std::unique_ptr<SmapiLauncher> launcher);
+   public:
+    explicit SmapiManager(std::unique_ptr<SmapiLauncher> launcher);
 
+    [[nodiscard]] SmapiInstallation inspect(const QString& gameDirectory) const;
     [[nodiscard]] bool isInstalled(const QString& gameDirectory) const;
 
-    [[nodiscard]] InstallResult install(const QString& gameDirectory, const QString& installerDirectory) const;
-    [[nodiscard]] LaunchResult launch(const QString& gameDirectory, const std::wstring& arguments = L"") const;
+    [[nodiscard]] LaunchResult launch(const QString& gameDirectory,
+                                      const std::wstring& arguments = L"") const;
 
-private:
-    std::unique_ptr<SmapiInstaller> installer_;
+   private:
+    SmapiDetector detector_;
     std::unique_ptr<SmapiLauncher> launcher_;
 };
 
