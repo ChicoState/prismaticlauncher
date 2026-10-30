@@ -1,6 +1,9 @@
 .git
 .agents
 build
+**/build
+**/.qtcreator
+**/CMakeLists.txt.user*
 out
 coverage
 vcpkg_installed

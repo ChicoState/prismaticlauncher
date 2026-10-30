@@ -99,6 +99,9 @@ docker run --rm prismaticlauncher-ci:local
 docker run --rm --entrypoint bash prismaticlauncher-ci:local -lc ./scripts/verify-infrastructure.sh
 ```
 
+The build context excludes Qt Creator settings and build directories, including those nested under
+`src/qt`, so local IDE state is not copied into the Linux image.
+
 The image is disposable and exposes no ports or volumes. Remove the local image when no longer needed with `docker image rm prismaticlauncher-ci:local`.
 
 ### 4. Quality checks

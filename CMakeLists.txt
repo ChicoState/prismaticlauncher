@@ -12,28 +12,13 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Network Test Widgets)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 qt_standard_project_setup()
 
 add_subdirectory(src/farmpack)
-add_subdirectory(src/qt)
 
-if(BUILD_TESTING)
-    qt_add_executable(launcher-ui-tests tests/ui/LauncherTests.cpp
-        resources/styles.txt
-
-    )
-    target_link_libraries(launcher-ui-tests PRIVATE launcher-ui Qt6::Test)
-    add_test(NAME launcher-ui-tests COMMAND launcher-ui-tests)
-    set_tests_properties(launcher-ui-tests PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-    )
-
-    qt_add_executable(farmpack-tests tests/farmpack/FarmPackTests.cpp)
-    target_link_libraries(farmpack-tests PRIVATE farmpack Qt6::Test)
-    add_test(NAME farmpack-tests COMMAND farmpack-tests)
 add_library(nexus_fetch_list STATIC
     src/Nexus_fetchList/Nexus_fetchList.cpp
     src/Nexus_fetchList/NexusModPages.cpp
@@ -51,6 +36,10 @@ add_executable(nexus-fetch-list src/Nexus_fetchList/main.cpp)
 target_link_libraries(nexus-fetch-list PRIVATE nexus_fetch_list)
 
 if(BUILD_TESTING)
+    qt_add_executable(farmpack-tests tests/farmpack/FarmPackTests.cpp)
+    target_link_libraries(farmpack-tests PRIVATE farmpack Qt6::Test)
+    add_test(NAME farmpack-tests COMMAND farmpack-tests)
+
     add_executable(nexus-fetch-list-test tests/nexus_fetch_list_test.cpp)
     target_link_libraries(nexus-fetch-list-test PRIVATE nexus_fetch_list Qt6::Test)
     add_test(NAME nexus-fetch-list-test COMMAND nexus-fetch-list-test)
@@ -58,7 +47,5 @@ if(BUILD_TESTING)
     target_link_libraries(nexus-mod-pages-test PRIVATE nexus_fetch_list Qt6::Test)
     add_test(NAME nexus-mod-pages-test COMMAND nexus-mod-pages-test)
 endif()
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
-qt_standard_project_setup()
 
 add_subdirectory(src/qt)
