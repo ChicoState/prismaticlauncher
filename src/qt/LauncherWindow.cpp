@@ -1,6 +1,7 @@
 #include "LauncherWindow.h"
 
 #include "InstanceWindow.h"
+#include "NexusPage.h"
 #include "ui_AddInstanceDialog.h"
 #include "ui_LauncherWindow.h"
 
@@ -12,6 +13,7 @@
 #include <QPainter>
 #include <QProcess>
 #include <QPushButton>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QResource>
 
@@ -45,6 +47,24 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     : QMainWindow(parent), config_(configFile), ui_(std::make_unique<Ui::LauncherWindow>()) {
     Q_INIT_RESOURCE(resources);
     ui_->setupUi(this);
+    auto* library = takeCentralWidget();
+    auto* pages = new QStackedWidget;
+    pages->setObjectName("pages");
+    pages->addWidget(library);
+    auto* nexus = new NexusPage;
+    pages->addWidget(nexus);
+    setCentralWidget(pages);
+    auto* browse = new QPushButton("Browse Nexus mods", library);
+    browse->setObjectName("browseNexusMods");
+    ui_->libraryToolbar->insertWidget(3, browse);
+    connect(browse, &QPushButton::clicked, this, [pages, nexus] {
+        pages->setCurrentWidget(nexus);
+        nexus->fetchMods();
+    });
+    connect(nexus, &NexusPage::backRequested, this, [pages, library, browse] {
+        pages->setCurrentWidget(library);
+        browse->setFocus();
+    });
     resize(1120, 760);
     setWindowIcon(QIcon(":/resources/logo.png"));
     statusBar()->showMessage("Local launcher  /  UI preview");

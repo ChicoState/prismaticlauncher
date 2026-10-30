@@ -54,6 +54,27 @@ jobs:
         with:
           arch: x64
           vsversion: '2022'
+      - name: Check out pinned vcpkg
+        uses: actions/checkout@v4
+        with:
+          repository: microsoft/vcpkg
+          ref: e0a6b8572cf0ac716fdc11466522cf744e97e0bd
+          path: build/vcpkg
+      - name: Install JSON dependency
+        shell: pwsh
+        run: |
+          $vcpkg = Join-Path $PWD 'build/vcpkg'
+          if ($IsWindows) {
+            & "$vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+            $triplet = 'x64-windows'
+          } else {
+            & "$vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+            $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-osx' } else { 'x64-osx' }
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$vcpkg/vcpkg" install nlohmann-json --classic "--triplet=$triplet"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "nlohmann_json_ROOT=$vcpkg/installed/$triplet" >> $env:GITHUB_ENV
       - name: Configure CMake
         if: runner.os != 'Windows'
         run: cmake --preset dev
