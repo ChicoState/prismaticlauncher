@@ -34,7 +34,7 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
-With Qt available on CMake's search path, configure, build, test, and run:
+With Qt and nlohmann_json available on CMake's search path, configure, build, test, and run:
 
 ```bash
 cmake --preset dev
@@ -43,6 +43,25 @@ ctest --preset dev --output-on-failure
 ./build/dev/bin/prismatic-launch
 ```
 
+To make a live, read-only request to Nexus Mods, supply an API key only through the process environment. The probe fetches the ten most recently updated mods, then prints each mod's detailed metadata one at a time. It never prints the key:
+
+```bash
+NEXUS_API_KEY='your-api-key' ./build/dev/nexus-fetch-list
+```
+
+To browse mods in the desktop UI, launch `./build/dev/bin/prismatic-launch`
+with `NEXUS_API_KEY` set in its environment, then click **Browse Nexus mods** on the
+main library page. Select a name in the left-hand list to see the author, version,
+endorsements, summary, and full details on the right. **Open download page** opens
+the selected mod's Files tab on Nexus Mods; it does not install anything. The list
+loads 50 mods per page, sorted by latest update. Use **Previous** and **Next** to
+browse more, with a result counter showing the total. The filter searches only
+the current page. **Refresh** returns to the first page;
+**Back to library** returns to your instances. Requests run asynchronously
+and the page reports loading, empty results, and errors. The key is kept in memory
+only; after changing it, restart the launcher. This view does not install mods.
+
+The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
 For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
 
 On Ubuntu with `qt6-base-dev`, CMake 3.28+, a C++ compiler, and Make installed, Ninja is optional with this alternate build:
@@ -58,7 +77,7 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 ### Game path and UI scope
 
-`prismatic-launcher/src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in the instance Settings page. The launcher toolbar's Settings button opens the SMAPI settings window.
+`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
 
 Edit Instance → Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
@@ -67,7 +86,7 @@ Edit Instance → Settings → Save game path writes a per-user INI override usi
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods browses recently updated Nexus mods; Modpacks remains a preview page. Mod installation and management are not connected. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
 The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout, reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
 
@@ -98,14 +117,13 @@ Formatting and analysis include `prismatic-launcher/src/qt` and `tests`. Static 
 To capture offscreen screenshots alongside the UI test run:
 
 ```bash
-PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview QT_QPA_PLATFORM=offscreen ./build/dev/launcher-ui-tests
+PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview ctest --preset dev --output-on-failure
 ```
 
 ## CI and releases
 
 Pull requests run Linux Docker validation, infrastructure checks, formatting, static analysis, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8.3, build the launcher, and run the offscreen Qt tests.
-=======
-Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3; Windows then activates its MSVC 2022 x64 build environment to match the Qt kit. Product targets will extend those validations.
+Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. The Linux image installs `nlohmann-json3-dev` alongside its Qt development packages. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3 and install `nlohmann-json` with the repository-pinned vcpkg revision in classic mode, exposing its prefix through `nlohmann_json_ROOT`. This keeps the prebuilt Qt SDK while supplying the header-only JSON dependency. Windows activates its MSVC 2022 x64 build environment to match the Qt kit. Product targets will extend those validations.
 
 Tags matching `v*` start the guarded GitHub Release workflow. It intentionally fails before publishing until product-owned `packaging/` scripts exist and the protected `release` environment contains the required Apple notarization configuration. Future releases will publish portable archives: Windows ZIP, macOS ZIP, and Linux `tar.gz`, along with SHA-256 checksums.
 

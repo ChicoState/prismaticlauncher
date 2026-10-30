@@ -1,4 +1,5 @@
 #include "InstanceWindow.h"
+#include "NexusPage.h"
 
 #include <QComboBox>
 #include <QFileDialog>
@@ -19,6 +20,11 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     setWindowFlag(Qt::Window, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
     resize(960, 680);
+    mods_ = new NexusPage(ui_->modsPage, false);
+    ui_->modsLayout->addWidget(mods_);
+    // Keep the sidebar compact so both mod panes fit at the minimum window size.
+    ui_->navigation->setFixedWidth(120);
+    ui_->bodyLayout->setStretch(1, 1);
     connectSignals();
     setInstance(name, modded);
 }
@@ -28,6 +34,12 @@ InstanceWindow::~InstanceWindow() = default;
 void InstanceWindow::connectSignals() {
     connect(ui_->navigation, &QListWidget::currentRowChanged, ui_->detailPages,
             &QStackedWidget::setCurrentIndex);
+    connect(ui_->navigation, &QListWidget::currentRowChanged, this, [this](int tab) {
+        if (tab == 0 && !modsLoaded_) {
+            modsLoaded_ = true;
+            mods_->fetchMods();
+        }
+    });
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
     connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
     connect(ui_->logFilter, &QLineEdit::textChanged, this, [this](const QString& query) {
@@ -68,6 +80,10 @@ void InstanceWindow::setInstance(const QString& name, bool modded) {
 void InstanceWindow::selectTab(int tab) {
     if (tab < 0 || tab >= ui_->navigation->count()) return;
     ui_->navigation->setCurrentRow(tab);
+    if (tab == 0 && !modsLoaded_) {
+        modsLoaded_ = true;
+        mods_->fetchMods();
+    }
 }
 
 void InstanceWindow::refreshPathStatus() {
