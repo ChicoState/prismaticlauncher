@@ -6,7 +6,11 @@ qt_add_library(launcher-ui STATIC
     NexusPage.cpp NexusPage.h
     ModBrowser.cpp ModBrowser.h
     ../../resources.qrc
+    SmapiWindow.h SmapiWindow.cpp SmapiWindow.ui
+
 )
+target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets smapi-core)
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack)
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)
