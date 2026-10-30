@@ -10,7 +10,7 @@ qt_add_library(launcher-ui STATIC
 
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(launcher-ui PUBLIC Qt6::Widgets smapi-core
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets smapi-core)
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack)
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)
