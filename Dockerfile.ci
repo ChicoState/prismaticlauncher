@@ -17,6 +17,7 @@ RUN apt-get update \
         git \
         libgl1-mesa-dev \
         ninja-build \
+        nlohmann-json3-dev \
         qt6-base-dev \
         qt6-tools-dev \
         unzip \

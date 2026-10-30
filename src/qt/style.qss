@@ -281,3 +281,75 @@ QScrollBar::sub-page:vertical {
     height: 0;
     background: none;
 }
+
+/* Nexus browser follows the instance window's flat surfaces and blue actions. */
+QWidget#modBrowser { background: #f1f2f3; }
+QListWidget#modList {
+    background: #ffffff;
+    border: 1px solid #d8dcde;
+    border-radius: 4px;
+    padding: 4px;
+    outline: none;
+}
+QListWidget#modList::item {
+    color: #41474b;
+    padding: 10px 12px;
+    border: 1px solid transparent;
+    border-radius: 3px;
+}
+QListWidget#modList::item:hover { background: #fff4d6; }
+QListWidget#modList::item:selected {
+    background: #ffe8ad;
+    color: #2c627d;
+    border-color: #ffb703;
+}
+QListWidget#modList::item:focus { border-color: #805900; }
+QWidget#modDetailPanel {
+    background: #ffffff;
+    border: 1px solid #d8dcde;
+    border-radius: 4px;
+}
+QScrollArea#modDetailScroll, QWidget#modDetailContent {
+    background: #ffffff;
+    border: none;
+}
+QLabel#modTitle { color: #30363b; font-size: 20px; font-weight: 600; }
+QLabel#modAuthor { color: #555c61; font-size: 13px; }
+QLabel#modMetadata { color: #626c73; font-size: 12px; }
+QLabel#modSummary { color: #41474b; font-size: 14px; }
+QLabel#modDescription { color: #555c61; font-size: 13px; }
+QLabel#modListStatus, QLabel#modDetailStatus { color: #626c73; font-size: 12px; }
+QPushButton#modRefresh, QPushButton#backFromNexus {
+    padding: 8px 12px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+QPushButton#modRefresh:hover, QPushButton#backFromNexus:hover { border-color: #aab3b8; }
+QPushButton#modRefresh:focus, QPushButton#backFromNexus:focus { border-color: #805900; }
+QPushButton#modDownload {
+    background: #4b9dcc;
+    color: #182f3d;
+    border: 1px solid #4b9dcc;
+    border-radius: 4px;
+    padding: 10px 12px;
+    font-weight: 600;
+}
+QPushButton#modDownload:hover { background: #63add6; border-color: #3d8ebd; }
+QPushButton#modDownload:pressed { background: #ffb703; border-color: #ffb703; }
+QPushButton#modDownload:focus { border-color: #24343d; }
+QPushButton#modDownload:disabled { background: #e8eaeb; color: #747b80; border-color: #d7dbdd; }
+QSplitter#modSplitter::handle { background: #f1f2f3; }
+QSplitter#modSplitter::handle:hover { background: #d8dcde; }
+
+QLabel#modPageCount { color: #626c73; font-size: 12px; }
+QPushButton#modPrevious, QPushButton#modNext {
+    padding: 6px 8px;
+    border: 1px solid #cbd0d3;
+    border-radius: 4px;
+    background: #ffffff;
+}
+QPushButton#modPrevious:hover, QPushButton#modNext:hover { background: #e8f2f6; border-color: #4b9dcc; }
+QPushButton#modPrevious:focus, QPushButton#modNext:focus { border-color: #805900; }
+QPushButton#modPrevious:disabled, QPushButton#modNext:disabled {
+    background: #e8eaeb; color: #747b80; border-color: #d7dbdd;
+}

@@ -6,6 +6,8 @@
 
 #include "LauncherConfig.h"
 
+class NexusPage;
+
 namespace Ui {
 class InstanceWindow;
 }
@@ -29,6 +31,8 @@ class InstanceWindow : public QMainWindow {
     void refreshPathStatus();
     void launchGame();
 
+    NexusPage* mods_;
+    bool modsLoaded_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;
 };

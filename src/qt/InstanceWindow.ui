@@ -48,23 +48,10 @@ Local installation</string></property></widget></item>
         <property name="currentIndex"><number>0</number></property>
         <widget class="QWidget" name="modsPage">
          <layout class="QVBoxLayout" name="modsLayout">
-          <property name="leftMargin"><number>32</number></property><property name="topMargin"><number>32</number></property><property name="rightMargin"><number>32</number></property><property name="bottomMargin"><number>32</number></property>
-          <item><widget class="QLabel" name="modsTitle"><property name="text"><string>Your mods</string></property></widget></item>
-          <item><widget class="QLabel" name="modsDescription"><property name="text"><string>A home for the little things that change everything.</string></property></widget></item>
-          <item>
-           <layout class="QHBoxLayout" name="modsToolbar">
-            <item><widget class="QLabel" name="modsPreview"><property name="text"><string>PREVIEW</string></property></widget></item>
-            <item><spacer name="modsToolbarSpacer"><property name="orientation"><enum>Qt::Orientation::Horizontal</enum></property></spacer></item>
-            <item><widget class="QPushButton" name="addMod"><property name="enabled"><bool>false</bool></property><property name="toolTip"><string>Mod installation and management are not implemented in this UI build.</string></property><property name="text"><string>Add mod</string></property></widget></item>
-            <item><widget class="QPushButton" name="removeMod"><property name="enabled"><bool>false</bool></property><property name="text"><string>Remove</string></property></widget></item>
-            <item><widget class="QPushButton" name="updateMod"><property name="enabled"><bool>false</bool></property><property name="text"><string>Update</string></property></widget></item>
-           </layout>
-          </item>
-          <item><spacer name="modsTopSpacer"><property name="orientation"><enum>Qt::Orientation::Vertical</enum></property></spacer></item>
-          <item><widget class="QLabel" name="emptyIcon"><property name="text"><string>◇</string></property><property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property></widget></item>
-          <item><widget class="QLabel" name="emptyTitle"><property name="text"><string>Room for your next adventure</string></property><property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property></widget></item>
-          <item><widget class="QLabel" name="emptyDescription"><property name="text"><string>This feature is coming in a future build.</string></property><property name="alignment"><set>Qt::AlignmentFlag::AlignCenter</set></property></widget></item>
-          <item><spacer name="modsBottomSpacer"><property name="orientation"><enum>Qt::Orientation::Vertical</enum></property></spacer></item>
+          <property name="leftMargin"><number>0</number></property>
+          <property name="topMargin"><number>0</number></property>
+          <property name="rightMargin"><number>0</number></property>
+          <property name="bottomMargin"><number>0</number></property>
          </layout>
         </widget>
         <widget class="QWidget" name="logsPage">
