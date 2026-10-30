@@ -12,10 +12,18 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Network Test)
+find_package(Qt6 REQUIRED COMPONENTS Core Network Test Widgets)
 find_package(nlohmann_json CONFIG REQUIRED)
 
 qt_standard_project_setup()
+
+add_subdirectory(src/farmpack)
+
+if(BUILD_TESTING)
+    qt_add_executable(farmpack-tests tests/farmpack/FarmPackTests.cpp)
+    target_link_libraries(farmpack-tests PRIVATE farmpack Qt6::Test)
+    add_test(NAME farmpack-tests COMMAND farmpack-tests)
+endif()
 
 add_library(nexus_fetch_list STATIC
     src/Nexus_fetchList/Nexus_fetchList.cpp
@@ -41,7 +49,4 @@ if(BUILD_TESTING)
     target_link_libraries(nexus-mod-pages-test PRIVATE nexus_fetch_list Qt6::Test)
     add_test(NAME nexus-mod-pages-test COMMAND nexus-mod-pages-test)
 endif()
-find_package(Qt6 REQUIRED COMPONENTS Widgets)
-qt_standard_project_setup()
-
 add_subdirectory(src/qt)

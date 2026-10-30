@@ -6,13 +6,18 @@
 #include "ui_LauncherWindow.h"
 
 #include <QDialog>
+#include <QDate>
 #include <QDialogButtonBox>
 #include <QFileInfo>
+#include <QGraphicsOpacityEffect>
+#include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPainter>
 #include <QProcess>
+#include <QResizeEvent>
 #include <QPushButton>
+#include <QSlider>
 #include <QStackedWidget>
 #include <QStatusBar>
 #include <QResource>
@@ -21,11 +26,19 @@ const int INSTANCE_WIDTH = 146;
 const int INSTANCE_HEIGHT = 162;
 
 namespace {
-QIcon instanceIcon() {
+QIcon instanceIcon(const QString& imagePath = {}) {
     QPixmap art(160, 160);
     art.fill(QColor("#253e39"));
     QPainter painter(&art);
     painter.setRenderHint(QPainter::Antialiasing);
+    const QPixmap packImage(imagePath);
+    if (!packImage.isNull()) {
+        const auto image = packImage.scaled(144, 144, Qt::KeepAspectRatio,
+                                            Qt::SmoothTransformation);
+        painter.drawPixmap((art.width() - image.width()) / 2,
+                           (art.height() - image.height()) / 2, image);
+        return QIcon(art);
+    }
     painter.setPen(Qt::NoPen);
     painter.setBrush(QColor("#72c7ab"));
     painter.drawEllipse(75, 32, 40, 40);
@@ -69,8 +82,29 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     setWindowIcon(QIcon(":/resources/logo.png"));
     statusBar()->showMessage("Local launcher  /  UI preview");
 
+    farmPackOverlay_ = new QLabel(ui_->centralWidget);
+    farmPackOverlay_->setObjectName("farmPackOverlay");
+    farmPackOverlay_->setAttribute(Qt::WA_TransparentForMouseEvents);
+    farmPackOverlay_->setStyleSheet("background: transparent;");
+    farmPackOpacityEffect_ = new QGraphicsOpacityEffect(farmPackOverlay_);
+    farmPackOverlay_->setGraphicsEffect(farmPackOpacityEffect_);
+
+    const auto packResult = FarmPack::load(":/farmpack/manifest.json");
+    if (packResult.has_value()) {
+        farmPack_ = packResult.pack;
+        farmPackLoaded_ = true;
+        farmPackEnabled_ = config_.farmPackEnabled();
+    }
+    ui_->farmPackToggle->setChecked(farmPackEnabled_);
+    ui_->farmPackToggle->setEnabled(farmPackLoaded_);
+    ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
+    ui_->farmPackOpacity->setEnabled(farmPackLoaded_);
+    ui_->farmPackOpacityLabel->setEnabled(farmPackLoaded_);
+    farmPackOpacityEffect_->setOpacity(ui_->farmPackOpacity->value() / 100.0);
+
     connectSignals();
     populateInstances();
+    refreshFarmPackOverlay();
 }
 
 LauncherWindow::~LauncherWindow() = default;
@@ -83,6 +117,26 @@ void LauncherWindow::connectSignals() {
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
     connect(ui_->editInstance, &QPushButton::clicked, this,
             [this] { openInstanceWindow(); });
+    connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
+        if (!config_.saveFarmPackEnabled(enabled)) {
+            ui_->farmPackToggle->setChecked(farmPackEnabled_);
+            statusBar()->showMessage("Could not save Pack setting.");
+            return;
+        }
+        farmPackEnabled_ = enabled;
+        refreshFarmPackOverlay();
+        statusBar()->showMessage(enabled ? "ChickPix artwork enabled."
+                                         : "ChickPix artwork disabled.");
+    });
+    connect(ui_->farmPackOpacity, &QSlider::valueChanged, this, [this](int value) {
+        farmPackOpacityEffect_->setOpacity(value / 100.0);
+        if (!config_.saveFarmPackOpacityPercent(value)) {
+            ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
+            statusBar()->showMessage("Could not save Pack opacity.");
+            return;
+        }
+        refreshFarmPackOverlay();
+    });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
     connect(ui_->instances, &QListWidget::itemActivated, this,
             [this] { openInstanceWindow(); });
@@ -91,11 +145,37 @@ void LauncherWindow::connectSignals() {
 }
 
 void LauncherWindow::populateInstances() {
-    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
+    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla",
+                                     ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
     ui_->instances->setCurrentItem(item);
+}
+
+void LauncherWindow::refreshFarmPackOverlay() {
+    if (!farmPackLoaded_ || !farmPackEnabled_) {
+        farmPackOverlay_->hide();
+        return;
+    }
+
+    const QPixmap source(farmPack_.imageForDate(QDate::currentDate()));
+    if (source.isNull()) {
+        farmPackOverlay_->hide();
+        return;
+    }
+
+    const auto* central = ui_->centralWidget;
+    const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
+    const int targetHeight = qMax(220, central->height() * 55 / 100);
+    const auto image = source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
+                                     Qt::SmoothTransformation);
+    farmPackOverlay_->setPixmap(image);
+    farmPackOverlay_->adjustSize();
+    farmPackOverlay_->move(central->width() - farmPackOverlay_->width() - 20,
+                           central->height() - farmPackOverlay_->height() - 20);
+    farmPackOverlay_->raise();
+    farmPackOverlay_->show();
 }
 
 void LauncherWindow::filterInstances(const QString& query) {
@@ -122,7 +202,8 @@ void LauncherWindow::addInstance() {
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
-        instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
+        instanceIcon(),
+        dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
         ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, dialogUi.name->text().trimmed());
@@ -191,4 +272,9 @@ void LauncherWindow::launchGame() {
         return;
     }
     statusBar()->showMessage("Game launched.");
+}
+
+void LauncherWindow::resizeEvent(QResizeEvent* event) {
+    QMainWindow::resizeEvent(event);
+    refreshFarmPackOverlay();
 }

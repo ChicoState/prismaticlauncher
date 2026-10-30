@@ -98,6 +98,16 @@ QPushButton#smapi {
     max-height: 32px;
 }
 
+QPushButton#farmPackToggle:checked {
+    background: #ffe8ad;
+    border: 1px solid #d8a900;
+    border-radius: 4px;
+}
+
+QSlider#farmPackOpacity {
+    min-height: 18px;
+}
+
 QPushButton:hover {
     background: #eef1f3;
     border: 1px solid #ffb703;

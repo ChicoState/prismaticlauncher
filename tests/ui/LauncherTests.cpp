@@ -7,6 +7,7 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
+#include <QSlider>
 #include <QPointer>
 #include <QPushButton>
 #include <QSettings>
@@ -343,6 +344,7 @@ class LauncherTests : public QObject {
         QCOMPARE(config.gameDirectory(),
                  QDir::homePath() + "/.local/share/Steam/steamapps/common/Stardew Valley");
         QVERIFY(!QFileInfo::exists(config.filePath()));
+        QVERIFY(config.farmPackEnabled());
     }
 
     void persistPath() {
@@ -354,6 +356,23 @@ class LauncherTests : public QObject {
         QVERIFY(config.saveGameDirectory(temp.filePath("Game with spaces")));
         QCOMPARE(LauncherConfig(file).gameDirectory(), temp.filePath("Game with spaces"));
         QCOMPARE(LauncherConfig::expandHome("~/Games"), QDir::homePath() + "/Games");
+    }
+
+    void persistFarmPackToggle() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveFarmPackEnabled(false));
+        QVERIFY(!LauncherConfig(config.filePath()).farmPackEnabled());
+        QVERIFY(config.saveFarmPackEnabled(true));
+        QVERIFY(LauncherConfig(config.filePath()).farmPackEnabled());
+    }
+
+    void persistFarmPackOpacity() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QCOMPARE(config.farmPackOpacityPercent(), 75);
+        QVERIFY(config.saveFarmPackOpacityPercent(42));
+        QCOMPARE(LauncherConfig(config.filePath()).farmPackOpacityPercent(), 42);
     }
 
     void invalidConfigDoesNotUseWorkingDirectory() {
@@ -417,6 +436,36 @@ class LauncherTests : public QObject {
         }
         instanceWindow->findChild<QPushButton*>("backToLibrary")->click();
         QVERIFY(!instanceWindow->isVisible());
+    }
+
+    void farmPackToggleIsAvailableAndPersistent() {
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+        window.show();
+        QApplication::processEvents();
+        auto* toggle = window.findChild<QPushButton*>("farmPackToggle");
+        auto* opacity = window.findChild<QSlider*>("farmPackOpacity");
+        auto* overlay = window.findChild<QLabel*>("farmPackOverlay");
+        QVERIFY(toggle);
+        QVERIFY(opacity);
+        QVERIFY(overlay);
+        QVERIFY(toggle->isCheckable());
+        QVERIFY(toggle->isEnabled());
+        QVERIFY(toggle->isChecked());
+        QCOMPARE(opacity->value(), 75);
+        QVERIFY(!overlay->pixmap().isNull());
+        QVERIFY(overlay->isVisible());
+
+        toggle->click();
+
+        QVERIFY(!toggle->isChecked());
+        QVERIFY(!overlay->isVisible());
+        QVERIFY(!LauncherConfig(temp.filePath("launcher.ini")).farmPackEnabled());
+
+        toggle->click();
+        QVERIFY(overlay->isVisible());
+        opacity->setValue(42);
+        QCOMPARE(LauncherConfig(temp.filePath("launcher.ini")).farmPackOpacityPercent(), 42);
     }
 
     void instanceWindowUpdatesLibraryMode() {
