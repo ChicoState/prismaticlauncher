@@ -40,7 +40,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-2022, macos-14]
+        os: [windows-2022, macos-26]
     steps:
       - uses: actions/checkout@v7
       - name: Install Qt 6.8.3
