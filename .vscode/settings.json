@@ -1,0 +1,8 @@
+{
+    "cmake.sourceDirectory": "/home/jpste/Git/prismaticlauncher",
+    "terminal.integrated.defaultProfile.windows": "Ubuntu (WSL)",
+    "chat.tools.terminal.autoApprove": {
+        "code": true,
+        "code.exe": true
+    }
+}

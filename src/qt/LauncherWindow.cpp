@@ -1,11 +1,7 @@
 #include "LauncherWindow.h"
-#include "InstanceWindow.h"
-#include "NexusPage.h"
-#include "ui_AddInstanceDialog.h"
-#include "ui_LauncherWindow.h"
 
-#include <QDialog>
 #include <QDate>
+#include <QDialog>
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QGraphicsOpacityEffect>
@@ -13,16 +9,15 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPainter>
-#include <QProcess>
-#include <QResizeEvent>
 #include <QPushButton>
+#include <QResizeEvent>
+#include <QResource>
 #include <QSlider>
 #include <QStackedWidget>
 #include <QStatusBar>
-#include <QResource>
-#include <QStatusBar>
 
 #include "InstanceWindow.h"
+#include "NexusPage.h"
 #include "SmapiDetector.h"
 #include "SmapiWindow.h"
 #include "ui_AddInstanceDialog.h"
@@ -39,10 +34,10 @@ QIcon instanceIcon(const QString& imagePath = {}) {
     painter.setRenderHint(QPainter::Antialiasing);
     const QPixmap packImage(imagePath);
     if (!packImage.isNull()) {
-        const auto image = packImage.scaled(144, 144, Qt::KeepAspectRatio,
-                                            Qt::SmoothTransformation);
-        painter.drawPixmap((art.width() - image.width()) / 2,
-                           (art.height() - image.height()) / 2, image);
+        const auto image =
+            packImage.scaled(144, 144, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap((art.width() - image.width()) / 2, (art.height() - image.height()) / 2,
+                           image);
         return QIcon(art);
     }
     painter.setPen(Qt::NoPen);
@@ -119,8 +114,7 @@ void LauncherWindow::connectSignals() {
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
-    connect(ui_->editInstance, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
     connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
         if (!config_.saveFarmPackEnabled(enabled)) {
             ui_->farmPackToggle->setChecked(farmPackEnabled_);
@@ -159,8 +153,7 @@ void LauncherWindow::openSmapiWindow() {
 }
 
 void LauncherWindow::populateInstances() {
-    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla",
-                                     ui_->instances);
+    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
@@ -182,8 +175,8 @@ void LauncherWindow::refreshFarmPackOverlay() {
     const auto* central = ui_->centralWidget;
     const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
     const int targetHeight = qMax(220, central->height() * 55 / 100);
-    const auto image = source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
-                                     Qt::SmoothTransformation);
+    const auto image =
+        source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     farmPackOverlay_->setPixmap(image);
     farmPackOverlay_->adjustSize();
     farmPackOverlay_->move(central->width() - farmPackOverlay_->width() - 20,
@@ -216,8 +209,7 @@ void LauncherWindow::addInstance() {
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
-        instanceIcon(),
-        dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
+        instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
         ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, dialogUi.name->text().trimmed());
@@ -261,39 +253,8 @@ void LauncherWindow::launchGame() {
         statusBar()->showMessage("Select an instance first.");
         return;
     }
-    const auto directory = config_.gameDirectory();
-    const bool modded = item->data(Qt::UserRole + 1).toBool();
-    if (modded) {
-        const auto smapi = SmapiDetector().inspect(directory);
-        if (!smapi.isInstalled()) {
-            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
-            QMessageBox::warning(this, "Unable to launch SMAPI", message);
-            return;
-        }
-    }
-#ifdef Q_OS_WIN
-    const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
-#elif defined(Q_OS_MACOS)
-    const auto binary =
-        modded ? "Contents/MacOS/StardewModdingAPI" : "Contents/MacOS/StardewValley";
-#else
-    const auto binary = modded ? "StardewModdingAPI" : "StardewValley";
-#endif
-    const auto executable = directory + "/" + binary;
-    if (!QFileInfo(executable).isFile() || !QFileInfo(executable).isExecutable()) {
-        const auto message = "Executable not found or not runnable:\n" + executable;
-        QMessageBox::warning(this, "Unable to launch",
-                             message + "\n\nCheck your game path in Settings.");
-        return;
-    }
-    QProcess process;
-    process.setProgram(executable);
-    process.setWorkingDirectory(directory);
-    if (!process.startDetached()) {
-        QMessageBox::warning(this, "Unable to launch", process.errorString());
-        return;
-    }
-    statusBar()->showMessage("Game launched.");
+    openInstanceWindow(1);
+    instanceWindow_->launchGame();
 }
 
 void LauncherWindow::resizeEvent(QResizeEvent* event) {
