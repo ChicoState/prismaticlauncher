@@ -13,7 +13,7 @@ jobs:
     name: Linux quality and coverage
     runs-on: ubuntu-24.04
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Build Linux validation image
         run: docker build --pull=false -f Dockerfile.ci -t prismaticlauncher-ci:ci .
       - name: Run Linux validation
@@ -26,7 +26,7 @@ jobs:
       #  run: docker run --rm --entrypoint bash prismaticlauncher-ci:ci -lc ./scripts/static-analysis.sh
       - name: Upload diagnostics
         if: failure()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: linux-diagnostics
           path: |
@@ -42,7 +42,7 @@ jobs:
       matrix:
         os: [windows-2022, macos-14]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Install Qt 6.8.3
         uses: jurplel/install-qt-action@v4
         with:
@@ -54,6 +54,27 @@ jobs:
         with:
           arch: x64
           vsversion: '2022'
+      - name: Check out pinned vcpkg
+        uses: actions/checkout@v7
+        with:
+          repository: microsoft/vcpkg
+          ref: e0a6b8572cf0ac716fdc11466522cf744e97e0bd
+          path: build/vcpkg
+      - name: Install JSON dependency
+        shell: pwsh
+        run: |
+          $vcpkg = Join-Path $PWD 'build/vcpkg'
+          if ($IsWindows) {
+            & "$vcpkg/bootstrap-vcpkg.bat" -disableMetrics
+            $triplet = 'x64-windows'
+          } else {
+            & "$vcpkg/bootstrap-vcpkg.sh" -disableMetrics
+            $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-osx' } else { 'x64-osx' }
+          }
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          & "$vcpkg/vcpkg" install nlohmann-json --classic "--triplet=$triplet"
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          "nlohmann_json_ROOT=$vcpkg/installed/$triplet" >> $env:GITHUB_ENV
       - name: Configure CMake
         if: runner.os != 'Windows'
         run: cmake --preset dev

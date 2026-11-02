@@ -1,0 +1,17 @@
+
+{
+  "name": "ChickPix",
+  "default": "default.png",
+  "variants": [
+    {
+      "start": "03-01",
+      "end": "05-31",
+      "image": "spring.png"
+    },
+    {
+      "start": "06-01",
+      "end": "08-31",
+      "image": "summer.png"
+    }
+  ]
+}

@@ -29,4 +29,4 @@ PY
 cmake --preset dev
 ctest --preset dev --show-only=json-v1 >/dev/null
 
-echo 'Infrastructure and Qt launcher configuration are valid.'
+echo 'Infrastructure configuration and CTest discovery are valid.'

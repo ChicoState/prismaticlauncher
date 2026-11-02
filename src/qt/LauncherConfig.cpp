@@ -30,3 +30,30 @@ bool LauncherConfig::saveGameDirectory(const QString& directory) {
     settings.sync();
     return settings.status() == QSettings::NoError;
 }
+
+bool LauncherConfig::farmPackEnabled() const {
+    QSettings settings(filePath_, QSettings::IniFormat);
+    return settings.value("appearance/farm-pack-enabled", true).toBool();
+}
+
+bool LauncherConfig::saveFarmPackEnabled(bool enabled) {
+    if (!QDir().mkpath(QFileInfo(filePath_).absolutePath())) return false;
+    QSettings settings(filePath_, QSettings::IniFormat);
+    settings.setValue("appearance/farm-pack-enabled", enabled);
+    settings.sync();
+    return settings.status() == QSettings::NoError;
+}
+
+int LauncherConfig::farmPackOpacityPercent() const {
+    QSettings settings(filePath_, QSettings::IniFormat);
+    return qBound(0, settings.value("appearance/farm-pack-opacity", 75).toInt(), 100);
+}
+
+bool LauncherConfig::saveFarmPackOpacityPercent(int percent) {
+    if (percent < 0 || percent > 100) return false;
+    if (!QDir().mkpath(QFileInfo(filePath_).absolutePath())) return false;
+    QSettings settings(filePath_, QSettings::IniFormat);
+    settings.setValue("appearance/farm-pack-opacity", percent);
+    settings.sync();
+    return settings.status() == QSettings::NoError;
+}
