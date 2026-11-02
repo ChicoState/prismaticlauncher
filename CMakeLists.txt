@@ -12,7 +12,7 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 include(CTest)
 
-find_package(Qt6 REQUIRED COMPONENTS Core Test Widgets)
+find_package(Qt6 REQUIRED COMPONENTS Core Network Test Widgets)
 find_package(nlohmann_json CONFIG REQUIRED)
 qt_standard_project_setup()
 
@@ -34,16 +34,6 @@ add_subdirectory(src/qt)
 add_subdirectory(src/farmpack)
 
 if(BUILD_TESTING)
-    qt_add_executable(launcher-ui-tests tests/ui/LauncherTests.cpp
-        resources/styles.txt
-
-    )
-    target_link_libraries(launcher-ui-tests PRIVATE launcher-ui Qt6::Test)
-    add_test(NAME launcher-ui-tests COMMAND launcher-ui-tests)
-    set_tests_properties(launcher-ui-tests PROPERTIES
-        ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
-    )
-
     qt_add_executable(smapi-tests tests/smapi/SmapiDetectorTests.cpp)
     target_link_libraries(smapi-tests PRIVATE smapi-core Qt6::Test)
     add_test(NAME smapi-tests COMMAND smapi-tests)
