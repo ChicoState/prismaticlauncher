@@ -1,12 +1,7 @@
 #include "LauncherWindow.h"
 
-#include "InstanceWindow.h"
-#include "NexusPage.h"
-#include "ui_AddInstanceDialog.h"
-#include "ui_LauncherWindow.h"
-
-#include <QDialog>
 #include <QDate>
+#include <QDialog>
 #include <QDialogButtonBox>
 #include <QFileInfo>
 #include <QGraphicsOpacityEffect>
@@ -14,12 +9,19 @@
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPainter>
-#include <QResizeEvent>
 #include <QPushButton>
+#include <QResizeEvent>
+#include <QResource>
 #include <QSlider>
 #include <QStackedWidget>
 #include <QStatusBar>
-#include <QResource>
+
+#include "InstanceWindow.h"
+#include "NexusPage.h"
+#include "SmapiDetector.h"
+#include "SmapiWindow.h"
+#include "ui_AddInstanceDialog.h"
+#include "ui_LauncherWindow.h"
 
 const int INSTANCE_WIDTH = 146;
 const int INSTANCE_HEIGHT = 162;
@@ -32,10 +34,10 @@ QIcon instanceIcon(const QString& imagePath = {}) {
     painter.setRenderHint(QPainter::Antialiasing);
     const QPixmap packImage(imagePath);
     if (!packImage.isNull()) {
-        const auto image = packImage.scaled(144, 144, Qt::KeepAspectRatio,
-                                            Qt::SmoothTransformation);
-        painter.drawPixmap((art.width() - image.width()) / 2,
-                           (art.height() - image.height()) / 2, image);
+        const auto image =
+            packImage.scaled(144, 144, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+        painter.drawPixmap((art.width() - image.width()) / 2, (art.height() - image.height()) / 2,
+                           image);
         return QIcon(art);
     }
     painter.setPen(Qt::NoPen);
@@ -109,13 +111,10 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->settings, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(2); });
-    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
-            &LauncherWindow::filterInstances);
+    connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
-    connect(ui_->editInstance, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
     connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
         if (!config_.saveFarmPackEnabled(enabled)) {
             ui_->farmPackToggle->setChecked(farmPackEnabled_);
@@ -137,15 +136,24 @@ void LauncherWindow::connectSignals() {
         refreshFarmPackOverlay();
     });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
-    connect(ui_->instances, &QListWidget::itemActivated, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->instances, &QListWidget::itemActivated, this, [this] { openInstanceWindow(); });
     connect(ui_->instances, &QListWidget::itemDoubleClicked, this,
             [this] { openInstanceWindow(); });
 }
 
+void LauncherWindow::openSmapiWindow() {
+    if (!smapiWindow_) {
+        smapiWindow_ = new SmapiWindow(config_.gameDirectory(), this);
+    } else {
+        smapiWindow_->setGameDirectory(config_.gameDirectory());
+    }
+    smapiWindow_->show();
+    smapiWindow_->raise();
+    smapiWindow_->activateWindow();
+}
+
 void LauncherWindow::populateInstances() {
-    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla",
-                                     ui_->instances);
+    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, "Stardew Valley");
     item->setData(Qt::UserRole + 1, false);
@@ -167,8 +175,8 @@ void LauncherWindow::refreshFarmPackOverlay() {
     const auto* central = ui_->centralWidget;
     const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
     const int targetHeight = qMax(220, central->height() * 55 / 100);
-    const auto image = source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
-                                     Qt::SmoothTransformation);
+    const auto image =
+        source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
     farmPackOverlay_->setPixmap(image);
     farmPackOverlay_->adjustSize();
     farmPackOverlay_->move(central->width() - farmPackOverlay_->width() - 20,
@@ -189,20 +197,19 @@ void LauncherWindow::addInstance() {
     Ui::AddInstanceDialog dialogUi;
     dialogUi.setupUi(&dialog);
     dialogUi.buttons->button(QDialogButtonBox::Ok)->setText("Create instance");
-    dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-        !dialogUi.name->text().trimmed().isEmpty());
-    connect(dialogUi.name, &QLineEdit::textChanged, &dialog,
-            [&dialogUi](const QString& value) {
-                dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-                    !value.trimmed().isEmpty());
-            });
+    dialogUi.buttons->button(QDialogButtonBox::Ok)
+        ->setEnabled(!dialogUi.name->text().trimmed().isEmpty());
+    connect(dialogUi.name, &QLineEdit::textChanged, &dialog, [&dialogUi](const QString& value) {
+        dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
+    });
 
-    if (dialog.exec() != QDialog::Accepted) {return;}
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
-        instanceIcon(),
-        dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
+        instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
         ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
     item->setData(Qt::UserRole, dialogUi.name->text().trimmed());

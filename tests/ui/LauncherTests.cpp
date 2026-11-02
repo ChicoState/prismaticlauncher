@@ -7,10 +7,11 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
-#include <QSlider>
+#include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
 #include <QSettings>
+#include <QSlider>
 #include <QStackedWidget>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -19,7 +20,9 @@
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
+#include "LogWindow.h"
 #include "ModBrowser.h"
+#include "SmapiWindow.h"
 
 namespace {
 QVector<NexusModSummary> sampleMods() {
@@ -200,9 +203,8 @@ class LauncherTests : public QObject {
     void modDescriptionReadableText_data() {
         QTest::addColumn<QString>("description");
         QTest::addColumn<QString>("expected");
-        QTest::newRow("html")
-            << "<p><b>Seasonal</b> &amp; cozy</p><p>Install:<br>Copy to Mods.</p>"
-            << "Seasonal & cozy\nInstall:\nCopy to Mods.";
+        QTest::newRow("html") << "<p><b>Seasonal</b> &amp; cozy</p><p>Install:<br>Copy to Mods.</p>"
+                              << "Seasonal & cozy\nInstall:\nCopy to Mods.";
         QTest::newRow("plain") << "First line\n\nSecond line: 1 < 2 & 3 > 2."
                                << "First line\n\nSecond line: 1 < 2 & 3 > 2.";
         QTest::newRow("escaped-tags") << "<p>Use &lt;b&gt; for bold.</p>"
@@ -302,7 +304,8 @@ class LauncherTests : public QObject {
         QCOMPARE(instanceWindow->size(), QSize(820, 600));
         auto* download = browser->findChild<QPushButton*>("modDownload");
         QVERIFY(download->isVisible());
-        const auto buttonRect = QRect(download->mapTo(instanceWindow, QPoint(0, 0)), download->size());
+        const auto buttonRect =
+            QRect(download->mapTo(instanceWindow, QPoint(0, 0)), download->size());
         QVERIFY(instanceWindow->rect().contains(buttonRect));
         if (!screenshots.isEmpty()) {
             QVERIFY(instanceWindow->grab().save(screenshots + "/mods-minimum-sample.png"));
@@ -482,17 +485,22 @@ class LauncherTests : public QObject {
         QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
     }
 
-    void launcherSettingsOpensInstanceSettingsTab() {
+    void smapiButtonOpensSmapiWindow() {
         QTemporaryDir temp;
-        LauncherWindow window(temp.filePath("launcher.ini"));
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
 
-        auto* settingsButton = window.findChild<QPushButton*>("settings");
-        QVERIFY(settingsButton);
-        settingsButton->click();
-        auto* instanceWindow = window.findChild<InstanceWindow*>();
-        QVERIFY(instanceWindow);
-        QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 2);
-        QVERIFY(instanceWindow->isVisible());
+        auto* smapiButton = window.findChild<QPushButton*>("smapi");
+        QVERIFY(smapiButton);
+        smapiButton->click();
+        auto* smapiWindow = window.findChild<SmapiWindow*>();
+        QVERIFY(smapiWindow);
+        QVERIFY(smapiWindow->isVisible());
+        QCOMPARE(smapiWindow->windowTitle(), QString("SMAPI Settings"));
+        QVERIFY(smapiWindow->findChild<QLabel*>("stateLabel")
+                    ->text()
+                    .contains("not installed", Qt::CaseInsensitive));
     }
 
     void missingExecutable() {
@@ -511,6 +519,62 @@ class LauncherTests : public QObject {
             if (button->text() == "▶  Play") button->click();
         }
         QVERIFY(warningShown);
+    }
+
+    /// @brief Rejects a library launch without SMAPI and records the error in its console.
+    void moddedLibraryLaunchRequiresSmapi() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
+        auto* item = window.findChild<QListWidget*>("instances")->currentItem();
+        item->setData(Qt::UserRole + 1, true);
+
+        bool warningShown = false;
+        QTimer::singleShot(0, &window, [&warningShown] {
+            if (auto* warning = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                warningShown = warning->text().contains("SMAPI is not installed");
+                warning->accept();
+            }
+        });
+        for (auto* button : window.findChildren<QPushButton*>()) {
+            if (button->text() == "▶  Play") button->click();
+        }
+        QVERIFY(warningShown);
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>();
+        QVERIFY(logs);
+        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
+    }
+
+    /// @brief Rejects an instance launch without SMAPI and records the error in its console.
+    void moddedInstanceLaunchRequiresSmapi() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        LauncherWindow window(config.filePath());
+        window.findChild<QPushButton*>("editInstance")->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        instanceWindow->findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
+
+        bool warningShown = false;
+        QTimer::singleShot(0, instanceWindow, [&warningShown] {
+            if (auto* warning = qobject_cast<QMessageBox*>(QApplication::activeModalWidget())) {
+                warningShown = warning->text().contains("SMAPI is not installed");
+                warning->accept();
+            }
+        });
+        instanceWindow->findChild<QPushButton*>("playDetailInstance")->click();
+        QVERIFY(warningShown);
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>();
+        QVERIFY(logs);
+        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
     }
 
     void saveSettings() {

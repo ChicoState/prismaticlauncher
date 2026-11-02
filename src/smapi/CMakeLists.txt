@@ -1,7 +1,8 @@
 # The root CMakeLists.txt includes this directory after finding Qt.
-# Group the installer, launcher, and coordinating manager in a reusable static library.
+# Group installation detection, launching, and coordination in a reusable static library.
 qt_add_library(launcher-smapi STATIC
-    SmapiInstaller.cpp SmapiInstaller.h
+    ManagedAssemblyVersionReader.cpp ManagedAssemblyVersionReader.h
+    SmapiDetector.cpp SmapiDetector.h SmapiVersion.h
     SmapiLauncher.cpp SmapiLauncher.h
     SmapiManager.cpp SmapiManager.h
 )

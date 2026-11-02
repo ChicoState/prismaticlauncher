@@ -24,7 +24,7 @@ class InstanceWindow : public QMainWindow {
 
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
-    /// @brief Starts the selected game asynchronously and captures its console output.
+    /// @brief Validates SMAPI for modded launches, then starts the game with console capture.
     void launchGame();
 
    signals:

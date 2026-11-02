@@ -1,5 +1,4 @@
 #include "InstanceWindow.h"
-#include "NexusPage.h"
 
 #include <QComboBox>
 #include <QFileDialog>
@@ -12,6 +11,8 @@
 #include <QStringDecoder>
 
 #include "LogWindow.h"
+#include "NexusPage.h"
+#include "SmapiDetector.h"
 #include "ui_InstanceWindow.h"
 
 InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
@@ -107,6 +108,15 @@ void InstanceWindow::launchGame() {
     }
     const auto directory = config_->gameDirectory();
     const bool modded = ui_->launchMode->currentIndex() == 1;
+    if (modded) {
+        const auto smapi = SmapiDetector().inspect(directory);
+        if (!smapi.isInstalled()) {
+            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
+            logWindow_->appendMessage(message, LogWindow::Severity::Error);
+            QMessageBox::warning(this, "Unable to launch SMAPI", message);
+            return;
+        }
+    }
 #ifdef Q_OS_WIN
     const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
 #elif defined(Q_OS_MACOS)

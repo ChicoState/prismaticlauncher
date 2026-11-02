@@ -9,37 +9,35 @@
 class SmapiTests : public QObject {
     Q_OBJECT
    private slots:
-    /// @brief Rejects installation when the requested game directory is missing.
+    /// @brief Reports an invalid path when the requested game directory is missing.
     void managerRejectsMissingGameDirectory() {
         QTemporaryDir temp;
         QVERIFY(temp.isValid());
-        SmapiManager manager(std::make_unique<SmapiInstaller>(), std::make_unique<SmapiLauncher>());
+        SmapiManager manager(std::make_unique<SmapiLauncher>());
 
-        // Keep the installer directory valid so the missing game directory causes the failure.
-        const auto result = manager.install(temp.filePath("missing-game"), temp.path());
+        const auto result = manager.inspect(temp.filePath("missing-game"));
 
-        QCOMPARE(result.status, InstallStatus::InvalidGameDirectory);
-        QVERIFY(!result.succeeded());
+        QCOMPARE(result.state, SmapiState::InvalidGamePath);
+        QVERIFY(!result.isInstalled());
     }
 
-    /// @brief Rejects a missing installer directory when the game directory exists.
-    void managerRejectsMissingInstallerDirectory() {
+    /// @brief Reports SMAPI as absent when the game directory contains no SMAPI files.
+    void managerReportsMissingInstallation() {
         QTemporaryDir temp;
         QVERIFY(temp.isValid());
-        SmapiManager manager(std::make_unique<SmapiInstaller>(), std::make_unique<SmapiLauncher>());
+        SmapiManager manager(std::make_unique<SmapiLauncher>());
 
-        // An existing game directory lets validation reach the missing installer directory.
-        const auto result = manager.install(temp.path(), temp.filePath("missing-installer"));
+        const auto result = manager.inspect(temp.path());
 
-        QCOMPARE(result.status, InstallStatus::InvalidInstaller);
-        QVERIFY(!result.succeeded());
+        QCOMPARE(result.state, SmapiState::NotInstalled);
+        QVERIFY(!result.isInstalled());
     }
 
     /// @brief Reports SMAPI as absent and rejects launching from an empty directory.
     void managerRejectsLaunchWithoutSmapi() {
         QTemporaryDir temp;
         QVERIFY(temp.isValid());
-        SmapiManager manager(std::make_unique<SmapiInstaller>(), std::make_unique<SmapiLauncher>());
+        SmapiManager manager(std::make_unique<SmapiLauncher>());
 
         // The empty directory triggers the installation guard before platform-specific launching.
         QVERIFY(!manager.isInstalled(temp.path()));
