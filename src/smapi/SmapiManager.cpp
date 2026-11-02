@@ -1,52 +1,46 @@
 
 #include "SmapiManager.h"
 
-/* 
-* Installs SMAPI using the attached installer
-* @param the game directory
-* @param installer directory
-* @returns the result of the installation
-*/
-InstallResult SmapiManager::install(const QString& gameDirectory, const QString& installerDirectory) const {
-    return installer_->install(gameDirectory, installerDirectory);
+#include <utility>
+
+SmapiManager::SmapiManager(std::unique_ptr<SmapiLauncher> launcher)
+    : launcher_(std::move(launcher)) {}
+
+SmapiInstallation SmapiManager::inspect(const QString& gameDirectory) const {
+    return detector_.inspect(gameDirectory);
 }
 
 /*
-* Verfies the installation of SMAPI using attached launcher
-* @param the game directory
-* @returns whether SMAPI is intalled
-*/
+ * Verifies the user's SMAPI installation.
+ * @param the game directory
+ * @returns whether SMAPI is intalled
+ */
 bool SmapiManager::isInstalled(const QString& gameDirectory) const {
-    return installer_->isInstalled(gameDirectory);
+    return inspect(gameDirectory).isInstalled();
 }
 
 /*
-* Launches the game using the attached launcher
-* @param the game directory
-* @returns the result of the launch
-*/
-LaunchResult SmapiManager::launch(const QString& gameDirectory, const std::wstring& arguments) const {
-    if (!installer_->isInstalled(gameDirectory)) {
-        return {
-            .status = LaunchStatus::SmapiNotInstalled,
-            .message = "SMAPI is not installed or its installation is incomplete."
-        };
+ * Launches the modded game using the attached launcher after verification.
+ * @param the game directory
+ * @returns the result of the launch
+ */
+LaunchResult SmapiManager::launch(const QString& gameDirectory,
+                                  const std::wstring& arguments) const {
+    if (!inspect(gameDirectory).isInstalled()) {
+        return {.status = LaunchStatus::SmapiNotInstalled,
+                .message = "SMAPI is not installed or its installation is incomplete."};
     }
 
 #ifdef _WIN32
-    const bool launched = launcher_->launch(
-        std::filesystem::path(gameDirectory.toStdWString()),
-        arguments);
+    const bool launched =
+        launcher_->launch(std::filesystem::path(gameDirectory.toStdWString()), arguments);
 
-    return launched
-        ? LaunchResult{.status = LaunchStatus::Success,
-                       .message = "Stardew Valley started through SMAPI."}
-        : LaunchResult{.status = LaunchStatus::LaunchFailed,
-                       .message = "Unable to start Stardew Valley through SMAPI."};
+    return launched ? LaunchResult{.status = LaunchStatus::Success,
+                                   .message = "Stardew Valley started through SMAPI."}
+                    : LaunchResult{.status = LaunchStatus::LaunchFailed,
+                                   .message = "Unable to start Stardew Valley through SMAPI."};
 #else
-    return {
-        .status = LaunchStatus::UnsupportedPlatform,
-        .message = "SMAPI launching is not implemented for this platform yet."
-    };
+    return {.status = LaunchStatus::UnsupportedPlatform,
+            .message = "SMAPI launching is not implemented for this platform yet."};
 #endif
 }

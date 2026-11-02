@@ -1,6 +1,5 @@
 #include "InstanceWindow.h"
-
-#include "ui_InstanceWindow.h"
+#include "NexusPage.h"
 
 #include <QComboBox>
 #include <QCheckBox>
@@ -14,6 +13,9 @@
 #include <QSlider>
 #include <QStatusBar>
 #include <QTextCursor>
+
+#include "SmapiDetector.h"
+#include "ui_InstanceWindow.h"
 
 InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
                                QWidget* parent)
@@ -36,6 +38,11 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     setWindowFlag(Qt::Window, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
     resize(960, 680);
+    mods_ = new NexusPage(ui_->modsPage, false);
+    ui_->modsLayout->addWidget(mods_);
+    // Keep the sidebar compact so both mod panes fit at the minimum window size.
+    ui_->navigation->setFixedWidth(120);
+    ui_->bodyLayout->setStretch(1, 1);
     connectSignals();
     setInstance(name, modded);
 }
@@ -45,9 +52,14 @@ InstanceWindow::~InstanceWindow() = default;
 void InstanceWindow::connectSignals() {
     connect(ui_->navigation, &QListWidget::currentRowChanged, ui_->detailPages,
             &QStackedWidget::setCurrentIndex);
+    connect(ui_->navigation, &QListWidget::currentRowChanged, this, [this](int tab) {
+        if (tab == 0 && !modsLoaded_) {
+            modsLoaded_ = true;
+            mods_->fetchMods();
+        }
+    });
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
-    connect(ui_->playDetailInstance, &QPushButton::clicked, this,
-            &InstanceWindow::launchGame);
+    connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
     connect(ui_->logFilter, &QLineEdit::textChanged, this, [this](const QString& query) {
         auto cursor = ui_->logs->textCursor();
         cursor.movePosition(QTextCursor::Start);
@@ -139,6 +151,10 @@ void InstanceWindow::setInstance(const QString& name, bool modded) {
 void InstanceWindow::selectTab(int tab) {
     if (tab < 0 || tab >= ui_->navigation->count()) return;
     ui_->navigation->setCurrentRow(tab);
+    if (tab == 0 && !modsLoaded_) {
+        modsLoaded_ = true;
+        mods_->fetchMods();
+    }
 }
 
 void InstanceWindow::refreshPathStatus() {
@@ -153,6 +169,15 @@ void InstanceWindow::refreshPathStatus() {
 void InstanceWindow::launchGame() {
     const auto directory = config_->gameDirectory();
     const bool modded = ui_->launchMode->currentIndex() == 1;
+    if (modded) {
+        const auto smapi = SmapiDetector().inspect(directory);
+        if (!smapi.isInstalled()) {
+            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
+            ui_->logs->appendPlainText(message);
+            QMessageBox::warning(this, "Unable to launch SMAPI", message);
+            return;
+        }
+    }
 #ifdef Q_OS_WIN
     const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
 #elif defined(Q_OS_MACOS)

@@ -1,6 +1,6 @@
 #include "LauncherWindow.h"
-
 #include "InstanceWindow.h"
+#include "NexusPage.h"
 #include "ui_AddInstanceDialog.h"
 #include "ui_LauncherWindow.h"
 
@@ -17,8 +17,16 @@
 #include <QResizeEvent>
 #include <QPushButton>
 #include <QSlider>
+#include <QStackedWidget>
 #include <QStatusBar>
 #include <QResource>
+#include <QStatusBar>
+
+#include "InstanceWindow.h"
+#include "SmapiDetector.h"
+#include "SmapiWindow.h"
+#include "ui_AddInstanceDialog.h"
+#include "ui_LauncherWindow.h"
 
 const int INSTANCE_WIDTH = 146;
 const int INSTANCE_HEIGHT = 162;
@@ -58,6 +66,24 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     : QMainWindow(parent), config_(configFile), ui_(std::make_unique<Ui::LauncherWindow>()) {
     Q_INIT_RESOURCE(resources);
     ui_->setupUi(this);
+    auto* library = takeCentralWidget();
+    auto* pages = new QStackedWidget;
+    pages->setObjectName("pages");
+    pages->addWidget(library);
+    auto* nexus = new NexusPage;
+    pages->addWidget(nexus);
+    setCentralWidget(pages);
+    auto* browse = new QPushButton("Browse Nexus mods", library);
+    browse->setObjectName("browseNexusMods");
+    ui_->libraryToolbar->insertWidget(3, browse);
+    connect(browse, &QPushButton::clicked, this, [pages, nexus] {
+        pages->setCurrentWidget(nexus);
+        nexus->fetchMods();
+    });
+    connect(nexus, &NexusPage::backRequested, this, [pages, library, browse] {
+        pages->setCurrentWidget(library);
+        browse->setFocus();
+    });
     resize(1120, 760);
     setWindowIcon(QIcon(":/resources/logo.png"));
     statusBar()->showMessage("Local launcher  /  UI preview");
@@ -87,10 +113,8 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->settings, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(3); });
-    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
-            &LauncherWindow::filterInstances);
+    connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
     connect(ui_->editInstance, &QPushButton::clicked, this,
             [this] { openInstanceWindow(); });
@@ -106,10 +130,20 @@ void LauncherWindow::connectSignals() {
                                          : "ChickPix artwork disabled.");
     });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
-    connect(ui_->instances, &QListWidget::itemActivated, this,
-            [this] { openInstanceWindow(); });
+    connect(ui_->instances, &QListWidget::itemActivated, this, [this] { openInstanceWindow(); });
     connect(ui_->instances, &QListWidget::itemDoubleClicked, this,
             [this] { openInstanceWindow(); });
+}
+
+void LauncherWindow::openSmapiWindow() {
+    if (!smapiWindow_) {
+        smapiWindow_ = new SmapiWindow(config_.gameDirectory(), this);
+    } else {
+        smapiWindow_->setGameDirectory(config_.gameDirectory());
+    }
+    smapiWindow_->show();
+    smapiWindow_->raise();
+    smapiWindow_->activateWindow();
 }
 
 void LauncherWindow::populateInstances() {
@@ -167,15 +201,15 @@ void LauncherWindow::addInstance() {
     Ui::AddInstanceDialog dialogUi;
     dialogUi.setupUi(&dialog);
     dialogUi.buttons->button(QDialogButtonBox::Ok)->setText("Create instance");
-    dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-        !dialogUi.name->text().trimmed().isEmpty());
-    connect(dialogUi.name, &QLineEdit::textChanged, &dialog,
-            [&dialogUi](const QString& value) {
-                dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(
-                    !value.trimmed().isEmpty());
-            });
+    dialogUi.buttons->button(QDialogButtonBox::Ok)
+        ->setEnabled(!dialogUi.name->text().trimmed().isEmpty());
+    connect(dialogUi.name, &QLineEdit::textChanged, &dialog, [&dialogUi](const QString& value) {
+        dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
+    });
 
-    if (dialog.exec() != QDialog::Accepted) {return;}
+    if (dialog.exec() != QDialog::Accepted) {
+        return;
+    }
 
     const bool modded = dialogUi.mode->currentIndex() == 1;
     auto* item = new QListWidgetItem(
@@ -228,6 +262,14 @@ void LauncherWindow::launchGame() {
     }
     const auto directory = config_.gameDirectory();
     const bool modded = item->data(Qt::UserRole + 1).toBool();
+    if (modded) {
+        const auto smapi = SmapiDetector().inspect(directory);
+        if (!smapi.isInstalled()) {
+            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
+            QMessageBox::warning(this, "Unable to launch SMAPI", message);
+            return;
+        }
+    }
 #ifdef Q_OS_WIN
     const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
 #elif defined(Q_OS_MACOS)
