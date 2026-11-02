@@ -15,6 +15,7 @@ RUN apt-get update \
         g++ \
         gcovr \
         git \
+        libarchive-dev \
         libgl1-mesa-dev \
         ninja-build \
         nlohmann-json3-dev \

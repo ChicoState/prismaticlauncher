@@ -1,7 +1,4 @@
 #include "InstanceWindow.h"
-#include "NexusPage.h"
-
-#include "ui_InstanceWindow.h"
 
 #include <QComboBox>
 #include <QFileDialog>
@@ -10,7 +7,12 @@
 #include <QProcess>
 #include <QSignalBlocker>
 #include <QStatusBar>
+#include <QTabWidget>
 #include <QTextCursor>
+
+#include "ModInstallPage.h"
+#include "NexusPage.h"
+#include "ui_InstanceWindow.h"
 
 InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
                                QWidget* parent)
@@ -19,8 +21,13 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     setWindowFlag(Qt::Window, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
     resize(960, 680);
-    mods_ = new NexusPage(ui_->modsPage, false);
-    ui_->modsLayout->addWidget(mods_);
+    modTabs_ = new QTabWidget(ui_->modsPage);
+    modTabs_->setObjectName("modViews");
+    installedMods_ = new ModInstallPage(config_, modTabs_);
+    mods_ = new NexusPage(modTabs_, false);
+    modTabs_->addTab(installedMods_, "Installed");
+    modTabs_->addTab(mods_, "Browse Nexus");
+    ui_->modsLayout->addWidget(modTabs_);
     // Keep the sidebar compact so both mod panes fit at the minimum window size.
     ui_->navigation->setFixedWidth(120);
     ui_->bodyLayout->setStretch(1, 1);
@@ -33,15 +40,15 @@ InstanceWindow::~InstanceWindow() = default;
 void InstanceWindow::connectSignals() {
     connect(ui_->navigation, &QListWidget::currentRowChanged, ui_->detailPages,
             &QStackedWidget::setCurrentIndex);
-    connect(ui_->navigation, &QListWidget::currentRowChanged, this, [this](int tab) {
-        if (tab == 0 && !modsLoaded_) {
+    connect(modTabs_, &QTabWidget::currentChanged, this, [this](int tab) {
+        if (tab == 1 && !modsLoaded_) {
             modsLoaded_ = true;
             mods_->fetchMods();
         }
     });
+    connect(installedMods_, &ModInstallPage::activity, ui_->logs, &QPlainTextEdit::appendPlainText);
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
-    connect(ui_->playDetailInstance, &QPushButton::clicked, this,
-            &InstanceWindow::launchGame);
+    connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
     connect(ui_->logFilter, &QLineEdit::textChanged, this, [this](const QString& query) {
         auto cursor = ui_->logs->textCursor();
         cursor.movePosition(QTextCursor::Start);
@@ -60,12 +67,12 @@ void InstanceWindow::connectSignals() {
             return;
         }
         refreshPathStatus();
+        installedMods_->refresh();
         ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
         statusBar()->showMessage("Game path saved.");
     });
-    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
-        emit launchModeChanged(index == 1);
-    });
+    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
+            [this](int index) { emit launchModeChanged(index == 1); });
 }
 
 void InstanceWindow::setInstance(const QString& name, bool modded) {
@@ -81,7 +88,7 @@ void InstanceWindow::setInstance(const QString& name, bool modded) {
 void InstanceWindow::selectTab(int tab) {
     if (tab < 0 || tab >= ui_->navigation->count()) return;
     ui_->navigation->setCurrentRow(tab);
-    if (tab == 0 && !modsLoaded_) {
+    if (tab == 0 && modTabs_->currentIndex() == 1 && !modsLoaded_) {
         modsLoaded_ = true;
         mods_->fetchMods();
     }

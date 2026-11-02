@@ -5,10 +5,11 @@ qt_add_library(launcher-ui STATIC
     AddInstanceDialog.ui
     NexusPage.cpp NexusPage.h
     ModBrowser.cpp ModBrowser.h
+    ModInstallPage.cpp ModInstallPage.h
     ../../resources.qrc
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack)
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack mod-installer)
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)
 qt_add_resources(launcher-ui ui-resources
     PREFIX "/ui"
@@ -24,6 +25,10 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(mod-install-ui-tests ../../tests/ui/ModInstallTests.cpp)
+    target_link_libraries(mod-install-ui-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME mod-install-ui-tests COMMAND mod-install-ui-tests)
+    set_tests_properties(mod-install-ui-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     qt_add_executable(mod-pagination-tests ../../tests/ui/ModPaginationTests.cpp)
     target_link_libraries(mod-pagination-tests PRIVATE launcher-ui Qt6::Test)
     add_test(NAME mod-pagination-tests COMMAND mod-pagination-tests)
