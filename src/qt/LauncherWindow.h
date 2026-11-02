@@ -12,6 +12,7 @@ class LauncherWindow;
 }
 
 class InstanceWindow;
+class settings;
 
 class LauncherWindow : public QMainWindow {
     Q_OBJECT
@@ -25,10 +26,12 @@ class LauncherWindow : public QMainWindow {
     void populateInstances();
     void addInstance();
     void openInstanceWindow(int tab = 0);
+    void openSettingsWindow();
     void launchGame();
     void filterInstances(const QString& query);
 
     LauncherConfig config_;
     QPointer<InstanceWindow> instanceWindow_;
+    QPointer<settings> settingsWindow_;
     std::unique_ptr<Ui::LauncherWindow> ui_;
 };

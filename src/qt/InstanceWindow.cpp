@@ -3,7 +3,6 @@
 #include "ui_InstanceWindow.h"
 
 #include <QComboBox>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -36,21 +35,7 @@ void InstanceWindow::connectSignals() {
         ui_->logs->setTextCursor(cursor);
         if (!query.isEmpty()) ui_->logs->find(query);
     });
-    connect(ui_->browseGamePath, &QPushButton::clicked, this, [this] {
-        const auto directory = QFileDialog::getExistingDirectory(
-            this, "Select Stardew Valley folder", ui_->gamePath->text());
-        if (!directory.isEmpty()) ui_->gamePath->setText(directory);
-    });
-    connect(ui_->savePath, &QPushButton::clicked, this, [this] {
-        if (!config_->saveGameDirectory(ui_->gamePath->text())) {
-            ui_->pathStatus->setText(
-                "Could not save. Use an absolute path and a writable config location.");
-            return;
-        }
-        refreshPathStatus();
-        ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
-        statusBar()->showMessage("Game path saved.");
-    });
+    connect(ui_->openSettings, &QPushButton::clicked, this, &InstanceWindow::settingsRequested);
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
         emit launchModeChanged(index == 1);
     });
@@ -73,11 +58,17 @@ void InstanceWindow::selectTab(int tab) {
 
 void InstanceWindow::refreshPathStatus() {
     const auto directory = config_->gameDirectory();
-    ui_->gamePath->setText(directory);
-    ui_->pathStatus->setText(
+    const auto message =
         QFileInfo(directory).isDir()
-            ? "Game folder exists. Play checks the selected executable."
-            : "Game folder not found. Set your installation path in Settings.");
+            ? QString("Game folder exists. Play checks the selected executable.")
+            : QString("Game folder not found. Set your installation path in launcher settings.");
+    ui_->pathStatus->setText(directory + "\n" + message);
+}
+
+void InstanceWindow::refreshGameDirectory() {
+    refreshPathStatus();
+    ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
+    statusBar()->showMessage("Game path saved.");
 }
 
 void InstanceWindow::launchGame() {

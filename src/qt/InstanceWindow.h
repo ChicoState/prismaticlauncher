@@ -20,9 +20,11 @@ class InstanceWindow : public QMainWindow {
 
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
+    void refreshGameDirectory();
 
    signals:
     void launchModeChanged(bool modded);
+    void settingsRequested();
 
    private:
     void connectSignals();

@@ -59,14 +59,14 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 `prismatic-launcher/src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
 
-Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
+The library’s Settings button opens the separate launcher settings window (`settings.ui`). Browse selects a directory; Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
 ```ini
 [game]
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab keeps the instance launch mode and opens the shared launcher settings window. Saving there updates the game path for all instances; Back to Library closes the settings window and returns to the library. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
