@@ -1,6 +1,7 @@
 #include <QComboBox>
 #include <QCheckBox>
 #include <QDialog>
+#include <QDesktopServices>
 #include <QDir>
 #include <QFile>
 #include <QLabel>
