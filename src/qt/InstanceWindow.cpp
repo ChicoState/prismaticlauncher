@@ -51,23 +51,6 @@ void InstanceWindow::connectSignals() {
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
         emit launchModeChanged(index == 1);
     });
-    connect(ui_->browseGamePath, &QPushButton::clicked, this, [this] {
-        const auto directory = QFileDialog::getExistingDirectory(
-            this, "Select Stardew Valley folder", ui_->gamePath->text());
-        if (!directory.isEmpty()) ui_->gamePath->setText(directory);
-    });
-    connect(ui_->savePath, &QPushButton::clicked, this, [this] {
-        if (!config_->saveGameDirectory(ui_->gamePath->text())) {
-            ui_->pathStatus->setText(
-                "Could not save. Use an absolute path and a writable config location.");
-            return;
-        }
-        refreshPathStatus();
-        ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
-        statusBar()->showMessage("Game path saved.");
-    });
-    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
-            [this](int index) { emit launchModeChanged(index == 1); });
 }
 
 void InstanceWindow::setInstance(const QString& name, bool modded) {

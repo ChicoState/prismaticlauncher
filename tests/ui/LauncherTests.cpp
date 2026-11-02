@@ -512,6 +512,8 @@ class LauncherTests : public QObject {
         QVERIFY(window.isVisible());
         button->click();
         QCOMPARE(path->text(), LauncherConfig(temp.filePath("launcher.ini")).gameDirectory());
+    }
+
     void smapiButtonOpensSmapiWindow() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
