@@ -1,5 +1,6 @@
 qt_add_library(launcher-ui STATIC
     LauncherConfig.cpp LauncherConfig.h
+    LogWindow.cpp LogWindow.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
     AddInstanceDialog.ui
@@ -24,6 +25,11 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(log-window-tests ../../tests/ui/LogWindowTests.cpp)
+    target_link_libraries(log-window-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME log-window-tests COMMAND log-window-tests)
+    set_tests_properties(log-window-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     qt_add_executable(mod-pagination-tests ../../tests/ui/ModPaginationTests.cpp)
     target_link_libraries(mod-pagination-tests PRIVATE launcher-ui Qt6::Test)
     add_test(NAME mod-pagination-tests COMMAND mod-pagination-tests)
