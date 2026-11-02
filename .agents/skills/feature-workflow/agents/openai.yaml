@@ -1,0 +1,4 @@
+interface:
+  display_name: "Feature workflow"
+  short_description: "Refine, plan, build, test, and review a feature"
+  default_prompt: "Use $feature-workflow to refine my feature request, select the appropriate skills, delegate planning, implementation, testing, and review, and continue through verification without committing or pushing."

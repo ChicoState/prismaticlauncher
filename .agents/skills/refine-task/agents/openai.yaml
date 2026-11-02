@@ -1,0 +1,4 @@
+interface:
+  display_name: "Refine task"
+  short_description: "Clarify task prompts while preserving intent and scope"
+  default_prompt: "Use $refine-task to review and refine my draft task prompt, preserve its intent and constraints, and show meaningful changes without implementing the task."
