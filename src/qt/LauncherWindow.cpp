@@ -77,10 +77,7 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     }
     ui_->farmPackToggle->setChecked(farmPackEnabled_);
     ui_->farmPackToggle->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-    ui_->farmPackOpacity->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacityLabel->setEnabled(farmPackLoaded_);
-    farmPackOpacityEffect_->setOpacity(ui_->farmPackOpacity->value() / 100.0);
+    applyFarmPackSettings();
 
     connectSignals();
     populateInstances();
@@ -91,7 +88,7 @@ LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
     connect(ui_->settings, &QPushButton::clicked, this,
-            [this] { openInstanceWindow(2); });
+            [this] { openInstanceWindow(3); });
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
             &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
@@ -107,15 +104,6 @@ void LauncherWindow::connectSignals() {
         refreshFarmPackOverlay();
         statusBar()->showMessage(enabled ? "ChickPix artwork enabled."
                                          : "ChickPix artwork disabled.");
-    });
-    connect(ui_->farmPackOpacity, &QSlider::valueChanged, this, [this](int value) {
-        farmPackOpacityEffect_->setOpacity(value / 100.0);
-        if (!config_.saveFarmPackOpacityPercent(value)) {
-            ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-            statusBar()->showMessage("Could not save Pack opacity.");
-            return;
-        }
-        refreshFarmPackOverlay();
     });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
     connect(ui_->instances, &QListWidget::itemActivated, this,
@@ -139,15 +127,18 @@ void LauncherWindow::refreshFarmPackOverlay() {
         return;
     }
 
-    const QPixmap source(farmPack_.imageForDate(QDate::currentDate()));
+    const auto customImage = config_.farmPackImagePath();
+    const QPixmap source(customImage.isEmpty() ? farmPack_.imageForDate(QDate::currentDate())
+                                               : customImage);
     if (source.isNull()) {
         farmPackOverlay_->hide();
         return;
     }
 
     const auto* central = ui_->centralWidget;
-    const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
-    const int targetHeight = qMax(220, central->height() * 55 / 100);
+    const auto scale = config_.farmPackSizePercent();
+    const int targetWidth = qBound(140, central->width() * 30 * scale / 10000, 700);
+    const int targetHeight = qMax(140, central->height() * 55 * scale / 10000);
     const auto image = source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
                                      Qt::SmoothTransformation);
     farmPackOverlay_->setPixmap(image);
@@ -156,6 +147,12 @@ void LauncherWindow::refreshFarmPackOverlay() {
                            central->height() - farmPackOverlay_->height() - 20);
     farmPackOverlay_->raise();
     farmPackOverlay_->show();
+}
+
+void LauncherWindow::applyFarmPackSettings() {
+    const auto opacity = config_.farmPackOpacityPercent();
+    farmPackOpacityEffect_->setOpacity(opacity / 100.0);
+    refreshFarmPackOverlay();
 }
 
 void LauncherWindow::filterInstances(const QString& query) {
@@ -205,6 +202,8 @@ void LauncherWindow::openInstanceWindow(int tab) {
     const auto modded = item->data(Qt::UserRole + 1).toBool();
     if (!instanceWindow_) {
         instanceWindow_ = new InstanceWindow(name, modded, &config_, this);
+        connect(instanceWindow_, &InstanceWindow::chickPicsSettingsChanged, this,
+                &LauncherWindow::applyFarmPackSettings);
         connect(instanceWindow_, &InstanceWindow::launchModeChanged, this, [this](bool enabled) {
             if (auto* current = ui_->instances->currentItem()) {
                 current->setData(Qt::UserRole + 1, enabled);

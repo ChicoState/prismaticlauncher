@@ -1,4 +1,5 @@
 #include <QComboBox>
+#include <QCheckBox>
 #include <QDialog>
 #include <QDir>
 #include <QFile>
@@ -61,6 +62,23 @@ class LauncherTests : public QObject {
         QCOMPARE(config.farmPackOpacityPercent(), 75);
         QVERIFY(config.saveFarmPackOpacityPercent(42));
         QCOMPARE(LauncherConfig(config.filePath()).farmPackOpacityPercent(), 42);
+    }
+
+    void persistFarmPackSizeAndImage() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QCOMPARE(config.farmPackSizePercent(), 100);
+        QVERIFY(config.saveFarmPackSizePercent(140));
+        QCOMPARE(LauncherConfig(config.filePath()).farmPackSizePercent(), 140);
+        QVERIFY(config.saveFarmPackImagePath(":/farmpack/summer.png"));
+        QCOMPARE(LauncherConfig(config.filePath()).farmPackImagePath(),
+                 QString(":/farmpack/summer.png"));
+        const auto source = temp.filePath("outside.png");
+        QVERIFY(QFile::copy(":/farmpack/summer.png", source));
+        const auto imported = config.importFarmPackImage(source);
+        QVERIFY(!imported.isEmpty());
+        QCOMPARE(QFileInfo(imported).absolutePath(), config.farmPackImageDirectory());
+        QVERIFY(QFileInfo(imported).isFile());
     }
 
     void invalidConfigDoesNotUseWorkingDirectory() {
@@ -132,15 +150,12 @@ class LauncherTests : public QObject {
         window.show();
         QApplication::processEvents();
         auto* toggle = window.findChild<QPushButton*>("farmPackToggle");
-        auto* opacity = window.findChild<QSlider*>("farmPackOpacity");
         auto* overlay = window.findChild<QLabel*>("farmPackOverlay");
         QVERIFY(toggle);
-        QVERIFY(opacity);
         QVERIFY(overlay);
         QVERIFY(toggle->isCheckable());
         QVERIFY(toggle->isEnabled());
         QVERIFY(toggle->isChecked());
-        QCOMPARE(opacity->value(), 75);
         QVERIFY(!overlay->pixmap().isNull());
         QVERIFY(overlay->isVisible());
 
@@ -152,6 +167,11 @@ class LauncherTests : public QObject {
 
         toggle->click();
         QVERIFY(overlay->isVisible());
+        window.findChild<QPushButton*>("settings")->click();
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        auto* opacity = instanceWindow->findChild<QSlider*>("chickPicsOpacity");
+        QVERIFY(opacity);
         opacity->setValue(42);
         QCOMPARE(LauncherConfig(temp.filePath("launcher.ini")).farmPackOpacityPercent(), 42);
     }
@@ -179,7 +199,7 @@ class LauncherTests : public QObject {
         settingsButton->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
-        QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 2);
+        QCOMPARE(instanceWindow->findChild<QListWidget*>("navigation")->currentRow(), 3);
         QVERIFY(instanceWindow->isVisible());
     }
 

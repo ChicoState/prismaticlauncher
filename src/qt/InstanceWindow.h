@@ -23,6 +23,7 @@ class InstanceWindow : public QMainWindow {
 
    signals:
     void launchModeChanged(bool modded);
+    void chickPicsSettingsChanged();
 
    private:
     void connectSignals();

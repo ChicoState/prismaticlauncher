@@ -12,6 +12,12 @@ class LauncherConfig {
     bool saveFarmPackEnabled(bool enabled);
     [[nodiscard]] int farmPackOpacityPercent() const;
     bool saveFarmPackOpacityPercent(int percent);
+    [[nodiscard]] int farmPackSizePercent() const;
+    bool saveFarmPackSizePercent(int percent);
+    [[nodiscard]] QString farmPackImagePath() const;
+    bool saveFarmPackImagePath(const QString& imagePath);
+    [[nodiscard]] QString farmPackImageDirectory() const;
+    [[nodiscard]] QString importFarmPackImage(const QString& imagePath) const;
     static QString expandHome(const QString& path);
 
    private:

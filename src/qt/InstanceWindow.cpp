@@ -3,11 +3,15 @@
 #include "ui_InstanceWindow.h"
 
 #include <QComboBox>
+#include <QCheckBox>
+#include <QDir>
+#include <QFile>
 #include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
 #include <QSignalBlocker>
+#include <QSlider>
 #include <QStatusBar>
 #include <QTextCursor>
 
@@ -15,6 +19,20 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
                                QWidget* parent)
     : QMainWindow(parent), config_(config), ui_(std::make_unique<Ui::InstanceWindow>()) {
     ui_->setupUi(this);
+    const auto imageDirectory = config_->farmPackImageDirectory();
+    QDir().mkpath(imageDirectory);
+    for (const auto& image : {QString("default.png"), QString("spring.png"),
+                              QString("summer.png")}) {
+        const auto destination = QDir(imageDirectory).filePath(image);
+        if (!QFileInfo::exists(destination)) QFile::copy(":/farmpack/" + image, destination);
+    }
+    for (int index = 1; index < ui_->chickPicsImage->count(); ++index) {
+        const auto label = ui_->chickPicsImage->itemText(index).toLower();
+        const auto name = label.contains("spring")
+                              ? "spring.png"
+                              : label.contains("summer") ? "summer.png" : "default.png";
+        ui_->chickPicsImage->setItemData(index, QDir(imageDirectory).filePath(name));
+    }
     setWindowFlag(Qt::Window, true);
     setAttribute(Qt::WA_DeleteOnClose, false);
     resize(960, 680);
@@ -54,6 +72,40 @@ void InstanceWindow::connectSignals() {
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
         emit launchModeChanged(index == 1);
     });
+    connect(ui_->chickPicsEnabled, &QCheckBox::toggled, this, [this](bool enabled) {
+        if (config_->saveFarmPackEnabled(enabled)) emit chickPicsSettingsChanged();
+    });
+    connect(ui_->chickPicsImage, &QComboBox::currentIndexChanged, this, [this](int index) {
+        if (index < 0) return;
+        if (config_->saveFarmPackImagePath(ui_->chickPicsImage->itemData(index).toString())) {
+            emit chickPicsSettingsChanged();
+        }
+    });
+    connect(ui_->browseChickPicsImage, &QPushButton::clicked, this, [this] {
+        const auto image = QFileDialog::getOpenFileName(
+            this, "Add image to chickens folder", config_->farmPackImageDirectory(),
+            "Images (*.png *.jpg *.jpeg *.webp)");
+        if (image.isEmpty()) return;
+        const auto importedImage = config_->importFarmPackImage(image);
+        if (!importedImage.isEmpty() && config_->saveFarmPackImagePath(importedImage)) {
+            ui_->chickPicsImage->setCurrentIndex(ui_->chickPicsImage->findData(importedImage));
+            if (ui_->chickPicsImage->currentData().toString() != importedImage) {
+                ui_->chickPicsImage->addItem(QFileInfo(importedImage).fileName(), importedImage);
+                ui_->chickPicsImage->setCurrentIndex(ui_->chickPicsImage->count() - 1);
+            }
+            emit chickPicsSettingsChanged();
+        }
+    });
+    connect(ui_->chickPicsSize, &QSlider::valueChanged, this, [this](int value) {
+        if (config_->saveFarmPackSizePercent(value)) emit chickPicsSettingsChanged();
+    });
+    connect(ui_->chickPicsOpacity, &QSlider::valueChanged, this, [this](int value) {
+        if (config_->saveFarmPackOpacityPercent(value)) emit chickPicsSettingsChanged();
+    });
+    connect(ui_->resetChickPicsImage, &QPushButton::clicked, this, [this] {
+        const auto seasonalIndex = ui_->chickPicsImage->findData(QString());
+        if (seasonalIndex >= 0) ui_->chickPicsImage->setCurrentIndex(seasonalIndex);
+    });
 }
 
 void InstanceWindow::setInstance(const QString& name, bool modded) {
@@ -62,6 +114,24 @@ void InstanceWindow::setInstance(const QString& name, bool modded) {
     {
         const QSignalBlocker blocker(ui_->launchMode);
         ui_->launchMode->setCurrentIndex(modded ? 1 : 0);
+    }
+    {
+        const QSignalBlocker enabledBlocker(ui_->chickPicsEnabled);
+        ui_->chickPicsEnabled->setChecked(config_->farmPackEnabled());
+    }
+    {
+        const QSignalBlocker imageBlocker(ui_->chickPicsImage);
+        const auto imagePath = config_->farmPackImagePath();
+        const auto imageIndex = ui_->chickPicsImage->findData(imagePath);
+        ui_->chickPicsImage->setCurrentIndex(imageIndex >= 0 ? imageIndex : 0);
+    }
+    {
+        const QSignalBlocker sizeBlocker(ui_->chickPicsSize);
+        ui_->chickPicsSize->setValue(config_->farmPackSizePercent());
+    }
+    {
+        const QSignalBlocker opacityBlocker(ui_->chickPicsOpacity);
+        ui_->chickPicsOpacity->setValue(config_->farmPackOpacityPercent());
     }
     refreshPathStatus();
 }
