@@ -1,8 +1,6 @@
 #include "InstanceWindow.h"
 #include "NexusPage.h"
 
-#include "ui_InstanceWindow.h"
-
 #include <QComboBox>
 #include <QFileDialog>
 #include <QFileInfo>
@@ -11,6 +9,9 @@
 #include <QSignalBlocker>
 #include <QStatusBar>
 #include <QTextCursor>
+
+#include "SmapiDetector.h"
+#include "ui_InstanceWindow.h"
 
 InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
                                QWidget* parent)
@@ -40,8 +41,7 @@ void InstanceWindow::connectSignals() {
         }
     });
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
-    connect(ui_->playDetailInstance, &QPushButton::clicked, this,
-            &InstanceWindow::launchGame);
+    connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
     connect(ui_->logFilter, &QLineEdit::textChanged, this, [this](const QString& query) {
         auto cursor = ui_->logs->textCursor();
         cursor.movePosition(QTextCursor::Start);
@@ -63,9 +63,8 @@ void InstanceWindow::connectSignals() {
         ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
         statusBar()->showMessage("Game path saved.");
     });
-    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
-        emit launchModeChanged(index == 1);
-    });
+    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
+            [this](int index) { emit launchModeChanged(index == 1); });
 }
 
 void InstanceWindow::setInstance(const QString& name, bool modded) {
@@ -99,6 +98,15 @@ void InstanceWindow::refreshPathStatus() {
 void InstanceWindow::launchGame() {
     const auto directory = config_->gameDirectory();
     const bool modded = ui_->launchMode->currentIndex() == 1;
+    if (modded) {
+        const auto smapi = SmapiDetector().inspect(directory);
+        if (!smapi.isInstalled()) {
+            const auto message = "SMAPI is not installed or incomplete.\n" + smapi.diagnostic;
+            ui_->logs->appendPlainText(message);
+            QMessageBox::warning(this, "Unable to launch SMAPI", message);
+            return;
+        }
+    }
 #ifdef Q_OS_WIN
     const auto binary = modded ? "StardewModdingAPI.exe" : "Stardew Valley.exe";
 #elif defined(Q_OS_MACOS)
