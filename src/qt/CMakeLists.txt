@@ -7,9 +7,11 @@ qt_add_library(launcher-ui STATIC
     ModBrowser.cpp ModBrowser.h
     ModInstallPage.cpp ModInstallPage.h
     ../../resources.qrc
+    SmapiWindow.h SmapiWindow.cpp SmapiWindow.ui
+
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
-target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack mod-installer)
+target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack mod-installer smapi-core)
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets nexus_fetch_list)
 qt_add_resources(launcher-ui ui-resources
     PREFIX "/ui"

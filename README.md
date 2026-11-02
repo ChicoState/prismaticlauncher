@@ -7,7 +7,8 @@ Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its Qt W
 - `CMakeLists.txt`, `CMakePresets.json` — C++20 build and CTest harness configuration.
 - `vcpkg.json`, `vcpkg-configuration.json` — Qt dependency manifest and immutable vcpkg baseline.
 - `scripts/` — Linux CI, quality, and infrastructure-smoke scripts.
-- `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, and launch errors.
+- `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, SMAPI status, and launch errors.
+- `tests/smapi/` — fixture-based SMAPI installation and managed-assembly version detection tests.
 - `src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
 - `src/mods/`, `tests/mods/` — staged mod installation, archive validation, and filesystem tests.
 - `documents/mod-installation.md` — installation design, boundaries, and research sources.
@@ -80,7 +81,7 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 `src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
 
-Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
+Edit Instance → Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
 ```ini
 [game]
@@ -99,6 +100,8 @@ Play validates and starts the selected game's executable from that folder. Vanil
 The installer finds `manifest.json` inside download wrappers and multi-mod bundles, preserves each mod's assets, and copies complete mod folders. Dropping an individual file inside an extracted mod installs its enclosing mod folder. Loose files without a manifest, including standalone DLLs and legacy XNB replacements, receive an explanatory error. Sources are preserved; base-game files are never replaced. These rules follow the [Stardew installation guide](https://stardewvalleywiki.com/Modding:Player_Guide/Getting_Started) and [SMAPI manifest format](https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Manifest).
 
 The full selection is validated and staged before installation. Existing mod IDs and folder collisions are rejected, so updates require removing the existing copy manually first. Unsafe archive paths, links, encrypted or corrupt archives, and oversized inputs are rejected. Limits per selection are 100,000 entries, 2 GiB of extracted/copied data, 512 MiB per file/archive input, and 64 folder levels. Install SMAPI, Content Patcher, and any other required dependencies separately; the installer does not resolve dependencies or check game-version compatibility. See [the design](documents/mod-installation.md) for details.
+
+The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout, reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
