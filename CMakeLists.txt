@@ -43,6 +43,9 @@ if(BUILD_TESTING)
     set_tests_properties(smapi-tests PROPERTIES
         ENVIRONMENT "QT_QPA_PLATFORM=offscreen"
     )
+    qt_add_executable(smapi-manager-tests tests/smapi/SmapiTests.cpp)
+    target_link_libraries(smapi-manager-tests PRIVATE smapi-core Qt6::Test)
+    add_test(NAME smapi-manager-tests COMMAND smapi-manager-tests)
     qt_add_executable(farmpack-tests tests/farmpack/FarmPackTests.cpp)
     target_link_libraries(farmpack-tests PRIVATE farmpack Qt6::Test)
     add_test(NAME farmpack-tests COMMAND farmpack-tests)

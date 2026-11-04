@@ -5,6 +5,7 @@
 
 #include "LauncherConfig.h"
 
+class LogWindow;
 class NexusPage;
 class ModInstallPage;
 class QTabWidget;
@@ -23,6 +24,8 @@ class InstanceWindow : public QMainWindow {
 
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
+    /// @brief Validates SMAPI for modded launches, then starts the game with console capture.
+    void launchGame();
 
    signals:
     void launchModeChanged(bool modded);
@@ -30,7 +33,6 @@ class InstanceWindow : public QMainWindow {
    private:
     void connectSignals();
     void refreshPathStatus();
-    void launchGame();
 
     NexusPage* mods_;
     ModInstallPage* installedMods_;
@@ -38,4 +40,6 @@ class InstanceWindow : public QMainWindow {
     bool modsLoaded_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;
+    LogWindow* logWindow_;
+    QPointer<QProcess> process_;
 };
