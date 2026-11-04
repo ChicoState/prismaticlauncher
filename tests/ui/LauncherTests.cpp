@@ -474,6 +474,7 @@ class LauncherTests : public QObject {
         QCOMPARE(LauncherConfig(temp.filePath("launcher.ini")).farmPackOpacityPercent(), 42);
     }
 
+    /// @brief Updates the library mode and emits one notification when the instance mode changes.
     void instanceWindowUpdatesLibraryMode() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
@@ -482,8 +483,10 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
+        QSignalSpy modeChanges(instanceWindow, &InstanceWindow::launchModeChanged);
         instanceWindow->findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
 
+        QCOMPARE(modeChanges.count(), 1);
         QCOMPARE(item->data(Qt::UserRole + 1).toBool(), true);
         QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
     }
@@ -608,6 +611,7 @@ class LauncherTests : public QObject {
         QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
     }
 
+    /// @brief Saves the shared game path, updates the instance, and records it in the log window.
     void saveSettings() {
         QTemporaryDir temp;
         const auto file = temp.filePath("launcher.ini");
@@ -630,6 +634,12 @@ class LauncherTests : public QObject {
         save->click();
         QCOMPARE(LauncherConfig(file).gameDirectory(), temp.path());
         QVERIFY(instanceWindow->findChild<QLabel*>("pathStatus")->text().contains(temp.path()));
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>("logs");
+        QVERIFY(logs);
+        const auto savedMessage = "Saved game directory: " + temp.path();
+        QCOMPARE(logs->toPlainText().count(savedMessage), 1);
         auto* status = settingsWindow->findChild<QLabel*>("pathStatus");
         QVERIFY(status);
         QVERIFY(status->text().contains("Saved"));

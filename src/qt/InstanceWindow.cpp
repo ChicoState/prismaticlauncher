@@ -52,19 +52,6 @@ void InstanceWindow::connectSignals() {
         logWindow_->activateWindow();
     });
     connect(ui_->openSettings, &QPushButton::clicked, this, &InstanceWindow::settingsRequested);
-    connect(ui_->launchMode, &QComboBox::currentIndexChanged, this, [this](int index) {
-        emit launchModeChanged(index == 1);
-    });
-    connect(ui_->savePath, &QPushButton::clicked, this, [this] {
-        if (!config_->saveGameDirectory(ui_->gamePath->text())) {
-            ui_->pathStatus->setText(
-                "Could not save. Use an absolute path and a writable config location.");
-            return;
-        }
-        refreshPathStatus();
-        logWindow_->appendMessage("Saved game directory: " + config_->gameDirectory());
-        statusBar()->showMessage("Game path saved.");
-    });
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
             [this](int index) { emit launchModeChanged(index == 1); });
 }
@@ -99,7 +86,7 @@ void InstanceWindow::refreshPathStatus() {
 
 void InstanceWindow::refreshGameDirectory() {
     refreshPathStatus();
-    ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
+    logWindow_->appendMessage("Saved game directory: " + config_->gameDirectory());
     statusBar()->showMessage("Game path saved.");
 }
 

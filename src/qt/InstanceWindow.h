@@ -24,6 +24,7 @@ class InstanceWindow : public QMainWindow {
 
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
+    /// @brief Refreshes the shared game path and records the saved directory in the log window.
     void refreshGameDirectory();
     /// @brief Validates SMAPI for modded launches, then starts the game with console capture.
     void launchGame();
@@ -33,6 +34,7 @@ class InstanceWindow : public QMainWindow {
     void settingsRequested();
 
    private:
+    /// @brief Connects instance controls to navigation, launching, logs, and shared settings.
     void connectSignals();
     void refreshPathStatus();
 
