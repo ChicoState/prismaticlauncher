@@ -14,6 +14,7 @@
 #include <QSettings>
 #include <QSlider>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest>
@@ -277,6 +278,7 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
+        instanceWindow->findChild<QTabWidget*>("modViews")->setCurrentIndex(1);
         auto* browser = instanceWindow->findChild<ModBrowser*>();
         QVERIFY(browser);
         browser->setMods(sampleMods());

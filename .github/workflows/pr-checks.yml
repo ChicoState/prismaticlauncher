@@ -60,7 +60,7 @@ jobs:
           repository: microsoft/vcpkg
           ref: e0a6b8572cf0ac716fdc11466522cf744e97e0bd
           path: build/vcpkg
-      - name: Install JSON dependency
+      - name: Install JSON and archive dependencies
         shell: pwsh
         run: |
           $vcpkg = Join-Path $PWD 'build/vcpkg'
@@ -72,15 +72,24 @@ jobs:
             $triplet = if ($env:RUNNER_ARCH -eq 'ARM64') { 'arm64-osx' } else { 'x64-osx' }
           }
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          & "$vcpkg/vcpkg" install nlohmann-json --classic "--triplet=$triplet"
+          & "$vcpkg/vcpkg" install nlohmann-json libarchive --classic "--triplet=$triplet"
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-          "nlohmann_json_ROOT=$vcpkg/installed/$triplet" >> $env:GITHUB_ENV
+          "VCPKG_TARGET_TRIPLET=$triplet" >> $env:GITHUB_ENV
+          if ($IsWindows) { "$vcpkg/installed/$triplet/bin" >> $env:GITHUB_PATH }
       - name: Configure CMake
         if: runner.os != 'Windows'
-        run: cmake --preset dev
+        run: >-
+          cmake --preset dev
+          "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/build/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_MANIFEST_MODE=OFF
+          "-DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TARGET_TRIPLET }}"
       - name: Configure CMake (Visual Studio)
         if: runner.os == 'Windows'
-        run: cmake --preset dev -G "Visual Studio 17 2022"
+        run: >-
+          cmake --preset dev -G "Visual Studio 17 2022"
+          "-DCMAKE_TOOLCHAIN_FILE=${{ github.workspace }}/build/vcpkg/scripts/buildsystems/vcpkg.cmake"
+          -DVCPKG_MANIFEST_MODE=OFF
+          "-DVCPKG_TARGET_TRIPLET=${{ env.VCPKG_TARGET_TRIPLET }}"
       - name: Build CMake targets
         run: cmake --build --preset dev --config Debug
       - name: Run Qt tests

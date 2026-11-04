@@ -8,6 +8,8 @@
 
 class LogWindow;
 class NexusPage;
+class ModInstallPage;
+class QTabWidget;
 class QProcess;
 
 namespace Ui {
@@ -24,7 +26,7 @@ class InstanceWindow : public QMainWindow {
 
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
-    /// @brief Refreshes the shared game path and records the saved directory in the log window.
+    /// @brief Refreshes the shared game path and installed mods, and logs the saved directory.
     void refreshGameDirectory();
     /// @brief Validates SMAPI for modded launches, then starts the game with console capture.
     void launchGame();
@@ -39,6 +41,8 @@ class InstanceWindow : public QMainWindow {
     void refreshPathStatus();
 
     NexusPage* mods_;
+    ModInstallPage* installedMods_;
+    QTabWidget* modTabs_;
     bool modsLoaded_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;
