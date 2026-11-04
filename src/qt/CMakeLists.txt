@@ -1,4 +1,5 @@
 qt_add_library(launcher-ui STATIC
+    GameDirectoryDetector.cpp GameDirectoryDetector.h
     LauncherConfig.cpp LauncherConfig.h
     LogWindow.cpp LogWindow.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
@@ -7,8 +8,8 @@ qt_add_library(launcher-ui STATIC
     NexusPage.cpp NexusPage.h
     ModBrowser.cpp ModBrowser.h
     ../../resources.qrc
+    settings.h settings.cpp settings.ui
     SmapiWindow.h SmapiWindow.cpp SmapiWindow.ui
-
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets smapi-core)
@@ -29,6 +30,10 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(settings-detection-tests ../../tests/ui/SettingsDetectionTests.cpp)
+    target_link_libraries(settings-detection-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME settings-detection-tests COMMAND settings-detection-tests)
+    set_tests_properties(settings-detection-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
     qt_add_executable(log-window-tests ../../tests/ui/LogWindowTests.cpp)
     target_link_libraries(log-window-tests PRIVATE launcher-ui Qt6::Test)
     add_test(NAME log-window-tests COMMAND log-window-tests)

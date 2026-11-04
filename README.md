@@ -1,6 +1,6 @@
 # Prismatic Launcher
 
-Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its initial Qt Widgets UI follows `image.png`: an instance library with Add/Play/Edit and a separate instance window with Mods, Logs, Settings, and Modpacks. Automatic game discovery, mod installation, SQLite data access, and release packaging are not connected yet.
+Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its initial Qt Widgets UI follows `image.png`: an instance library with Add/Play/Edit and a separate instance window with Mods, Logs, Settings, and Modpacks. Settings can detect a local game installation; the separate SMAPI window checks SMAPI status. Mod installation, SQLite data access, and release packaging are not connected yet.
 
 ## Repository map
 
@@ -77,7 +77,11 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 ### Game path and UI scope
 
-`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
+`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user. In Settings, **Auto Detect Directory** checks the current path first, then common Steam locations on Windows, macOS, and Linux (including Flatpak and Snap), additional libraries from Steam's `libraryfolders.vdf`, and standard GOG locations. It accepts a folder only when the platform's game executable is present. On macOS it selects the bundle root, with the executable under `Contents/MacOS`. The common installation locations follow [SMAPI's game-path discovery](https://github.com/Pathoschild/SMAPI/blob/develop/build/find-game-folder.targets).
+
+Detection fills the path field; **Save game path** persists it. If detection finds nothing, it keeps your current entry and suggests browsing manually. Custom installations outside the supported locations can still be selected with Browse. Use the library's **SMAPI** button to check SMAPI status for the saved game directory in the separate SMAPI window.
+
+The library’s Settings button opens the separate launcher settings window (`settings.ui`). Browse selects a directory; Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
 Edit Instance → Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
@@ -86,9 +90,9 @@ Edit Instance → Settings → Save game path writes a per-user INI override usi
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods browses recently updated Nexus mods; Modpacks remains a preview page. Mod installation and management are not connected. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab keeps the instance launch mode and opens the shared launcher settings window. Saving there updates the game path for all instances; Back to Library closes the settings window and returns to the library. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods and Modpacks show empty preview pages; mod-management actions are disabled. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
-The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout, reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
+The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout (including SMAPI's commented JSON metadata), reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
