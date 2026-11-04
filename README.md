@@ -36,6 +36,18 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
+For automatic dependency installation, set `VCPKG_ROOT` to your bootstrapped vcpkg checkout and use the `dev-vcpkg` preset. During configuration, vcpkg installs the manifest dependencies (including libarchive, nlohmann-json, and Qt) using the pinned registry baseline. CMake supplies libarchive headers and linkage to the mod installer through `LibArchive::LibArchive`; no separate libarchive installation is needed. The first configure requires network access and may take time to build Qt.
+
+```bash
+export VCPKG_ROOT=/path/to/vcpkg
+cmake --preset dev-vcpkg
+cmake --build --preset dev-vcpkg
+ctest --preset dev-vcpkg
+./build/dev-vcpkg/bin/prismatic-launch
+```
+
+This preset uses a separate build directory so it can coexist with the system-package build below.
+
 With Qt, nlohmann_json, and libarchive development files available on CMake's search path, configure, build, test, and run:
 
 ```bash
