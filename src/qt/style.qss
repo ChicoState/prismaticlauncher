@@ -45,6 +45,7 @@ QLabel#sectionTitle,
 QLabel#modsTitle,
 QLabel#logsTitle,
 QLabel#settingsTitle,
+QLabel#chickPicsTitle,
 QLabel#smapiTitle,
 QLabel#modpacksTitle {
     color: #30363b;
@@ -108,7 +109,8 @@ QPushButton#farmPackToggle:checked {
     border-radius: 4px;
 }
 
-QSlider#farmPackOpacity {
+QSlider#chickPicsSize,
+QSlider#chickPicsOpacity {
     min-height: 18px;
 }
 

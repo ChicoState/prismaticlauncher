@@ -37,6 +37,7 @@ class LauncherWindow : public QMainWindow {
     void launchGame();
     void filterInstances(const QString& query);
     void refreshFarmPackOverlay();
+    void applyFarmPackSettings();
     void resizeEvent(QResizeEvent* event) override;
 
     LauncherConfig config_;

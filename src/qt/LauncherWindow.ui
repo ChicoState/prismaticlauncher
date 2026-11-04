@@ -54,191 +54,113 @@
        <number>0</number>
       </property>
       <item>
-       <widget class="Line" name="line">
-        <property name="orientation">
-         <enum>Qt::Orientation::Horizontal</enum>
+       <widget class="QPushButton" name="addInstance">
+        <property name="text">
+         <string>+  Add</string>
         </property>
        </widget>
       </item>
       <item>
-       <layout class="QHBoxLayout" name="libraryToolbar">
-        <property name="spacing">
-         <number>8</number>
+       <widget class="QPushButton" name="playInstance">
+        <property name="text">
+         <string>▶  Play</string>
         </property>
-        <property name="leftMargin">
-         <number>8</number>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="editInstance">
+        <property name="text">
+         <string>✐ Edit</string>
         </property>
-        <property name="topMargin">
-         <number>8</number>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="farmPackToggle">
+        <property name="toolTip">
+         <string>Toggle ChickPix artwork</string>
         </property>
-        <property name="rightMargin">
-         <number>8</number>
+        <property name="accessibleName">
+         <string>Toggle ChickPix artwork</string>
         </property>
-        <property name="bottomMargin">
-         <number>8</number>
+        <property name="text">
+         <string>ChickPics</string>
         </property>
-        <item>
-         <widget class="QPushButton" name="addInstance">
-          <property name="text">
-           <string>+  Add</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="playInstance">
-          <property name="text">
-           <string>▶  Play</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="editInstance">
-          <property name="text">
-           <string>✐ Edit</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="Line" name="instancePackSeperator">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="farmPackToggle">
-          <property name="toolTip">
-           <string>Toggle ChickPix artwork</string>
-          </property>
-          <property name="accessibleName">
-           <string>Toggle ChickPix artwork</string>
-          </property>
-          <property name="text">
-           <string>Pack</string>
-          </property>
-          <property name="checkable">
-           <bool>true</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="farmPackOpacityLabel">
-          <property name="text">
-           <string>Opacity</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QSlider" name="farmPackOpacity">
-          <property name="minimumSize">
-           <size>
-            <width>90</width>
-            <height>0</height>
-           </size>
-          </property>
-          <property name="maximumSize">
-           <size>
-            <width>110</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="toolTip">
-           <string>ChickPix opacity</string>
-          </property>
-          <property name="accessibleName">
-           <string>ChickPix opacity</string>
-          </property>
-          <property name="maximum">
-           <number>100</number>
-          </property>
-          <property name="value">
-           <number>75</number>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Orientation::Horizontal</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="libraryToolbarSpacer">
-          <property name="orientation">
-           <enum>Qt::Orientation::Horizontal</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>13</width>
-            <height>13</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="instanceSearch">
-          <property name="maximumSize">
-           <size>
-            <width>240</width>
-            <height>16777215</height>
-           </size>
-          </property>
-          <property name="accessibleName">
-           <string>Search instances</string>
-          </property>
-          <property name="placeholderText">
-           <string>Search instances…</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="smapi">
-          <property name="toolTip">
-           <string>Configure SMAPI</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/SMAPI_mascot.png</normaloff>:/resources/SMAPI_mascot.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="Line" name="packSearchSeperator">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="settings">
-          <property name="toolTip">
-           <string>Settings</string>
-          </property>
-          <property name="accessibleName">
-           <string>Launcher settings</string>
-          </property>
-          <property name="text">
-           <string/>
-          </property>
-          <property name="icon">
-           <iconset resource="../../resources.qrc">
-            <normaloff>:/resources/settings.png</normaloff>:/resources/settings.png</iconset>
-          </property>
-          <property name="iconSize">
-           <size>
-            <width>32</width>
-            <height>32</height>
-           </size>
-          </property>
-         </widget>
-        </item>
-       </layout>
+        <property name="checkable">
+         <bool>true</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <spacer name="libraryToolbarSpacer">
+        <property name="orientation">
+         <enum>Qt::Orientation::Horizontal</enum>
+        </property>
+        <property name="sizeHint" stdset="0">
+         <size>
+          <width>13</width>
+          <height>13</height>
+         </size>
+        </property>
+       </spacer>
+      </item>
+      <item>
+       <widget class="QLineEdit" name="instanceSearch">
+        <property name="maximumSize">
+         <size>
+          <width>240</width>
+          <height>16777215</height>
+         </size>
+        </property>
+        <property name="accessibleName">
+         <string>Search instances</string>
+        </property>
+        <property name="placeholderText">
+         <string>Search instances…</string>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="smapi">
+        <property name="toolTip">
+         <string>Configure SMAPI</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/SMAPI_mascot.png</normaloff>:/resources/SMAPI_mascot.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="settings">
+        <property name="toolTip">
+         <string>Settings</string>
+        </property>
+        <property name="accessibleName">
+         <string>Launcher settings</string>
+        </property>
+        <property name="text">
+         <string/>
+        </property>
+        <property name="icon">
+         <iconset resource="../../resources.qrc">
+          <normaloff>:/resources/settings.png</normaloff>:/resources/settings.png</iconset>
+        </property>
+        <property name="iconSize">
+         <size>
+          <width>32</width>
+          <height>32</height>
+         </size>
+        </property>
+       </widget>
       </item>
       <item>
        <widget class="QListWidget" name="instances">

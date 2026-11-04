@@ -33,7 +33,7 @@ class InstanceWindow : public QMainWindow {
 
    signals:
     void launchModeChanged(bool modded);
-    void settingsRequested();
+    void chickPicsSettingsChanged();
 
    private:
     /// @brief Connects instance controls to navigation, launching, logs, and shared settings.
