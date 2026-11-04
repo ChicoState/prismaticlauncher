@@ -4,6 +4,7 @@
 #include <QDesktopServices>
 #include <QDir>
 #include <QFile>
+#include <QFileDialog>
 #include <QLabel>
 #include <QLineEdit>
 #include <QListWidget>
@@ -14,13 +15,16 @@
 #include <QSettings>
 #include <QSlider>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest>
 
+#include "../smapi/SmapiFixture.h"
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
+#include "settings.h"
 #include "LogWindow.h"
 #include "ModBrowser.h"
 #include "SmapiWindow.h"
@@ -66,6 +70,7 @@ class LauncherTests : public QObject {
     Q_OBJECT
    private slots:
     void initTestCase() {
+        QApplication::setAttribute(Qt::AA_DontUseNativeDialogs);
         qunsetenv("NEXUS_API_KEY");  // Tests never make live Nexus requests.
         QFile style(":/ui/style.qss");
         QVERIFY(style.open(QIODevice::ReadOnly));
@@ -275,6 +280,7 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
+        instanceWindow->findChild<QTabWidget*>("modViews")->setCurrentIndex(1);
         auto* browser = instanceWindow->findChild<ModBrowser*>();
         QVERIFY(browser);
         browser->setMods(sampleMods());
@@ -491,6 +497,7 @@ class LauncherTests : public QObject {
         QCOMPARE(LauncherConfig(temp.filePath("launcher.ini")).farmPackOpacityPercent(), 42);
     }
 
+    /// @brief Updates the library mode and emits one notification when the instance mode changes.
     void instanceWindowUpdatesLibraryMode() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
@@ -499,10 +506,40 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
+        QSignalSpy modeChanges(instanceWindow, &InstanceWindow::launchModeChanged);
         instanceWindow->findChild<QComboBox*>("launchMode")->setCurrentIndex(1);
 
+        QCOMPARE(modeChanges.count(), 1);
         QCOMPARE(item->data(Qt::UserRole + 1).toBool(), true);
         QCOMPARE(item->text(), QString("Stardew Valley\nModded"));
+    }
+
+    void launcherSettingsOpensSeparateWindow() {
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+        window.show();
+        window.findChild<QListWidget*>("instances")->setCurrentRow(-1);
+
+        auto* button = window.findChild<QPushButton*>("settings");
+        QVERIFY(button);
+        button->click();
+        auto* settingsWindow = window.findChild<settings*>();
+        QVERIFY(settingsWindow);
+        QVERIFY(settingsWindow->isWindow());
+        QVERIFY(settingsWindow->isVisible());
+        QVERIFY(!window.findChild<InstanceWindow*>());
+        auto* path = settingsWindow->findChild<QLineEdit*>("gameDirectoryValue");
+        QVERIFY(path);
+        QCOMPARE(path->text(), LauncherConfig(temp.filePath("launcher.ini")).gameDirectory());
+        path->setText("unsaved edit");
+        button->click();
+        QCOMPARE(window.findChildren<settings*>().size(), 1);
+        QCOMPARE(path->text(), QString("unsaved edit"));
+        settingsWindow->findChild<QPushButton*>("backLibrary")->click();
+        QVERIFY(!settingsWindow->isVisible());
+        QVERIFY(window.isVisible());
+        button->click();
+        QCOMPARE(path->text(), LauncherConfig(temp.filePath("launcher.ini")).gameDirectory());
     }
 
     void smapiButtonOpensSmapiWindow() {
@@ -528,6 +565,42 @@ class LauncherTests : public QObject {
         QVERIFY(smapiWindow->findChild<QLabel*>("stateLabel")
                     ->text()
                     .contains("not installed", Qt::CaseInsensitive));
+    }
+
+    /// @brief Shows a valid installation in the SMAPI window and rechecks it on reopening.
+    void smapiWindowDetectsSavedInstallation() {
+        QTemporaryDir temp;
+        const auto gameDirectory = temp.filePath("Stardew Valley");
+#ifdef Q_OS_MACOS
+        const auto executableDirectory = QDir(gameDirectory).filePath("Contents/MacOS");
+#else
+        const auto executableDirectory = gameDirectory;
+#endif
+        QVERIFY(SmapiTestFixtures::createSmapiFixture(executableDirectory, {4, 5, 2}, {4, 5, 2},
+                                                      "{ /* SMAPI metadata */ \"Mods\": {} }"));
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(gameDirectory));
+        LauncherWindow window(config.filePath());
+        auto* button = window.findChild<QPushButton*>("smapi");
+        QVERIFY(button);
+        button->click();
+        auto* smapiWindow = window.findChild<SmapiWindow*>();
+        QVERIFY(smapiWindow);
+        auto* status = smapiWindow->findChild<QLabel*>("stateLabel");
+        QVERIFY(status);
+        QCOMPARE(status->text(), QString("SMAPI installed\nVersion 4.5.2"));
+
+        QVERIFY(QFile::remove(QDir(executableDirectory).filePath("StardewModdingAPI.dll")));
+        smapiWindow->close();
+        button->click();
+        QVERIFY(status->text().contains("incomplete"));
+        QVERIFY(status->text().contains("StardewModdingAPI.dll"));
+
+        QVERIFY(SmapiTestFixtures::writeEmptyFile(
+            QDir(executableDirectory).filePath("StardewModdingAPI.dll")));
+        smapiWindow->close();
+        button->click();
+        QCOMPARE(status->text(), QString("SMAPI installed\nVersion 4.5.2"));
     }
 
     void missingExecutable() {
@@ -604,6 +677,7 @@ class LauncherTests : public QObject {
         QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
     }
 
+    /// @brief Saves the shared game path, updates the instance, and records it in the log window.
     void saveSettings() {
         QTemporaryDir temp;
         const auto file = temp.filePath("launcher.ini");
@@ -611,20 +685,104 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
-        auto* path = instanceWindow->findChild<QLineEdit*>("gamePath");
+        instanceWindow->findChild<QListWidget*>("navigation")->setCurrentRow(2);
+        auto* openSettings = instanceWindow->findChild<QPushButton*>("openSettings");
+        QVERIFY(openSettings);
+        openSettings->click();
+        auto* settingsWindow = window.findChild<settings*>();
+        QVERIFY(settingsWindow);
+        QVERIFY(settingsWindow->isVisible());
+        auto* path = settingsWindow->findChild<QLineEdit*>("gameDirectoryValue");
         QVERIFY(path);
         path->setText(temp.path());
-        instanceWindow->findChild<QPushButton*>("savePath")->click();
+        auto* save = settingsWindow->findChild<QPushButton*>("savePath");
+        QVERIFY(save);
+        save->click();
         QCOMPARE(LauncherConfig(file).gameDirectory(), temp.path());
-        instanceWindow->findChild<QListWidget*>("navigation")->setCurrentRow(2);
-        instanceWindow->resize(820, 600);
-        instanceWindow->show();
+        QVERIFY(instanceWindow->findChild<QLabel*>("pathStatus")->text().contains(temp.path()));
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>("logs");
+        QVERIFY(logs);
+        const auto savedMessage = "Saved game directory: " + temp.path();
+        QCOMPARE(logs->toPlainText().count(savedMessage), 1);
+        auto* status = settingsWindow->findChild<QLabel*>("pathStatus");
+        QVERIFY(status);
+        QVERIFY(status->text().contains("Saved"));
         const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
         if (!screenshots.isEmpty()) {
+            QVERIFY(QDir().mkpath(screenshots));
             QTest::qWait(40);
-            QVERIFY(instanceWindow->grab().save(screenshots + "/settings-minimum.png"));
+            QVERIFY(settingsWindow->grab().save(screenshots + "/settings-window.png"));
         }
+        settingsWindow->findChild<QPushButton*>("backLibrary")->click();
+        QVERIFY(!instanceWindow->isVisible());
+        LauncherWindow reopened(file);
+        reopened.findChild<QPushButton*>("settings")->click();
+        QCOMPARE(reopened.findChild<settings*>()->findChild<QLineEdit*>("gameDirectoryValue")->text(),
+                 temp.path());
     }
+
+    void invalidSettingsPathIsNotSaved_data() {
+        QTest::addColumn<QString>("path");
+        QTest::newRow("empty") << QString();
+        QTest::newRow("blank") << QString("   ");
+        QTest::newRow("relative") << QString("relative/game");
+    }
+
+    void invalidSettingsPathIsNotSaved() {
+        QFETCH(QString, path);
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(temp.path()));
+        settings settingsWindow(&config);
+        settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->setText(path);
+        settingsWindow.findChild<QPushButton*>("savePath")->click();
+        QCOMPARE(config.gameDirectory(), temp.path());
+        QVERIFY(settingsWindow.findChild<QLabel*>("pathStatus")->text().contains("absolute path"));
+    }
+
+    void settingsReportsUnwritableConfig() {
+        QTemporaryDir temp;
+        QFile blocker(temp.filePath("blocked"));
+        QVERIFY(blocker.open(QIODevice::WriteOnly));
+        blocker.close();
+        LauncherConfig config(temp.filePath("blocked/launcher.ini"));
+        settings settingsWindow(&config);
+        settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->setText(temp.path());
+        settingsWindow.findChild<QPushButton*>("savePath")->click();
+        QVERIFY(settingsWindow.findChild<QLabel*>("pathStatus")->text().contains("Could not save"));
+        QVERIFY(!QFileInfo::exists(config.filePath()));
+    }
+
+    void browseSettingsDirectory() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        settings settingsWindow(&config);
+        settingsWindow.show();
+        bool dialogSeen = false;
+        QTimer::singleShot(0, &settingsWindow, [&] {
+            if (auto* dialog = qobject_cast<QFileDialog*>(QApplication::activeModalWidget())) {
+                dialogSeen = true;
+                dialog->setDirectory(temp.path());
+                dialog->selectFile(temp.path());
+                QMetaObject::invokeMethod(dialog, "accept", Qt::DirectConnection);
+            }
+        });
+        settingsWindow.findChild<QPushButton*>("browseDirectory")->click();
+        QVERIFY(dialogSeen);
+        const auto selected = settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->text();
+        QCOMPARE(QFileInfo(selected).canonicalFilePath(), QFileInfo(temp.path()).canonicalFilePath());
+        QVERIFY(!QFileInfo::exists(config.filePath()));
+        QTimer::singleShot(0, &settingsWindow, [] {
+            if (auto* dialog = qobject_cast<QFileDialog*>(QApplication::activeModalWidget())) {
+                dialog->reject();
+            }
+        });
+        settingsWindow.findChild<QPushButton*>("browseDirectory")->click();
+        QCOMPARE(settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->text(), selected);
+    }
+
 };
 
 QTEST_MAIN(LauncherTests)

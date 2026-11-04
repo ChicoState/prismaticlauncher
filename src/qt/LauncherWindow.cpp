@@ -16,6 +16,7 @@
 #include <QStackedWidget>
 #include <QStatusBar>
 
+#include "settings.h"
 #include "InstanceWindow.h"
 #include "NexusPage.h"
 #include "SmapiDetector.h"
@@ -108,6 +109,10 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
+    connect(ui_->settings, &QPushButton::clicked, this,
+            &LauncherWindow::openSettingsWindow);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
+            &LauncherWindow::filterInstances);
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
@@ -247,6 +252,27 @@ void LauncherWindow::openInstanceWindow(int tab) {
     instanceWindow_->show();
     instanceWindow_->raise();
     instanceWindow_->activateWindow();
+}
+
+void LauncherWindow::openSettingsWindow() {
+    if (!settingsWindow_) {
+        settingsWindow_ = new settings(&config_, this);
+        connect(settingsWindow_, &settings::gameDirectoryChanged, this, [this] {
+            if (instanceWindow_) instanceWindow_->refreshGameDirectory();
+            statusBar()->showMessage("Game path saved.");
+        });
+        connect(settingsWindow_, &settings::backToLibraryRequested, this, [this] {
+            if (instanceWindow_) instanceWindow_->hide();
+            show();
+            raise();
+            activateWindow();
+            ui_->settings->setFocus();
+        });
+    }
+    if (!settingsWindow_->isVisible()) settingsWindow_->reload();
+    settingsWindow_->show();
+    settingsWindow_->raise();
+    settingsWindow_->activateWindow();
 }
 
 void LauncherWindow::launchGame() {

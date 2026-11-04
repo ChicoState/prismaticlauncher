@@ -13,7 +13,6 @@ QLabel {
     background: transparent;
 }
 
-
 QLabel#brandMark {
     color: #3e9a61;
     font-size: 28px;
@@ -90,7 +89,7 @@ QLabel#emptyTitle {
 QPushButton {
     background: #f1f2f3;
     color: #3f454a;
-    padding: 14px 14px;
+    padding: 12px 12px;
     min-height: 18px;
     font-weight: 400;
     outline: none;
@@ -103,6 +102,7 @@ QPushButton#smapi {
     max-height: 32px;
 }
 
+QPushButton:pressed,
 QPushButton#farmPackToggle:checked {
     background: #ffe8ad;
     border: 1px solid #d8a900;
@@ -115,34 +115,8 @@ QSlider#chickPicsOpacity {
 }
 
 QPushButton:hover {
-    background: #eef1f3;
-    border: 1px solid #ffb703;
+    border: 1px solid #a9a9a9;
     border-radius: 4px;
-    border-color: #aab3b8;
-}
-
-QPushButton:pressed {
-    background: #e3e7e9;
-}
-
-QPushButton:focus,
-QLineEdit:focus,
-QComboBox:focus,
-QListWidget:focus,
-QPlainTextEdit:focus {
-    border: 1px solid #ffb703;
-}
-
-QPushButton#playDetailInstance:hover,
-QPushButton#savePath:hover {
-    background: #3d8ebd;
-    border-color: #3d8ebd;
-}
-
-QPushButton#playInstance:pressed,
-QPushButton#playDetailInstance:pressed,
-QPushButton#savePath:pressed {
-    background: #ffb703;
 }
 
 QPushButton:disabled {
@@ -210,7 +184,7 @@ QListWidget#instances::item:hover {
 }
 
 QListWidget#navigation {
-    background: #f8f9f9;
+    background: #f1f2f3;
     border: 1px solid #d8dcde;
     border-radius: 4px;
     outline: none;
@@ -225,17 +199,13 @@ QListWidget#navigation::item {
 }
 
 QListWidget#navigation::item:selected {
-    background: #4b9dcc;
+    background: #ffb703;
     color: #ffffff;
 }
 
 QListWidget#navigation::item:hover {
-    background: #e8f2f6;
+    background: #ffe8ad;
     color: #2c627d;
-}
-
-QListWidget#navigation::item:focus {
-    border: 1px solid #4b9dcc;
 }
 
 QStackedWidget#detailPages {
@@ -346,6 +316,41 @@ QPushButton#modDownload:focus { border-color: #24343d; }
 QPushButton#modDownload:disabled { background: #e8eaeb; color: #747b80; border-color: #d7dbdd; }
 QSplitter#modSplitter::handle { background: #f1f2f3; }
 QSplitter#modSplitter::handle:hover { background: #d8dcde; }
+
+QWidget#modInstallPage { background: #ffffff; }
+QFrame#modDropZone {
+    background: #f8f9f9;
+    border: 1px dashed #aab3b8;
+    border-radius: 4px;
+}
+QFrame#modDropZone[dropActive="true"] {
+    background: #e8f2f6;
+    border: 2px solid #4b9dcc;
+}
+QLabel#modDropTitle { color: #30363b; font-size: 16px; font-weight: 600; }
+QLabel#modDropHelp, QLabel#modInstallHelp,
+QLabel#modInstallDestination, QLabel#modInstallStatus { color: #626c73; font-size: 12px; }
+QPushButton#installModFiles, QPushButton#installModFolder,
+QPushButton#refreshInstalledMods { padding: 8px 12px; border: 1px solid #cbd0d3; border-radius: 4px; }
+QPushButton#installModFiles { background: #4b9dcc; color: #182f3d; border-color: #4b9dcc; }
+QPushButton#installModFiles:focus, QPushButton#installModFolder:focus,
+QPushButton#refreshInstalledMods:focus { border-color: #805900; }
+QPushButton#installModFiles:disabled, QPushButton#installModFolder:disabled,
+QPushButton#refreshInstalledMods:disabled { background: #e8eaeb; color: #747b80; }
+QTableWidget#installedMods {
+    background: #ffffff;
+    border: 1px solid #d8dcde;
+    border-radius: 4px;
+    selection-background-color: #ffe8ad;
+    selection-color: #2c627d;
+}
+QTableWidget#installedMods::item { padding: 4px; }
+QTableWidget#installedMods:focus { border-color: #805900; }
+QHeaderView::section { background: #f8f9f9; padding: 6px; border: none; border-bottom: 1px solid #d8dcde; }
+QTabWidget::pane { border: none; }
+QTabBar::tab { background: #f8f9f9; padding: 8px 16px; border-bottom: 2px solid transparent; }
+QTabBar::tab:selected { color: #2c627d; border-bottom-color: #4b9dcc; }
+QTabBar::tab:focus { border-bottom-color: #805900; }
 
 QLabel#modPageCount { color: #626c73; font-size: 12px; }
 QPushButton#modPrevious, QPushButton#modNext {

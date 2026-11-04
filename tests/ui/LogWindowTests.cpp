@@ -339,9 +339,8 @@ class LogWindowTests : public QObject {
 
     /// @brief Creates a temporary executable fixture, returning false on any write failure.
     static bool writeFixture(const QString& root, const QByteArray& script) {
-        if (!SmapiTestFixtures::createSmapiFixture(root, {4, 5, 2}, {4, 5, 2})) return false;
         const QString directory = fixtureDirectory(root);
-        if (!QDir().mkpath(directory)) return false;
+        if (!SmapiTestFixtures::createSmapiFixture(directory, {4, 5, 2}, {4, 5, 2})) return false;
         QFile file(directory + "/StardewModdingAPI");
         if (!file.open(QIODevice::WriteOnly)) return false;
         if (file.write(script) != script.size()) return false;

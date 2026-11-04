@@ -1,6 +1,6 @@
 # Prismatic Launcher
 
-Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its initial Qt Widgets UI follows `image.png`: an instance library with Add/Play/Edit and a separate instance window with Mods, Logs, Settings, and Modpacks. Automatic game discovery, mod installation, SQLite data access, and release packaging are not connected yet.
+Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its Qt Widgets UI provides an instance library with Add/Play/Edit and a separate window with Mods, Logs, Settings, and Modpacks. Mods supports local drag-and-drop installation into one shared game directory and browsing Nexus Mods. Automatic game discovery, SQLite data access, and release packaging are not connected yet.
 
 ## Repository map
 
@@ -10,6 +10,8 @@ Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its init
 - `tests/ui/` — offscreen Qt Test coverage for config, search, navigation, SMAPI status, and launch errors.
 - `tests/smapi/` — fixture-based SMAPI installation and managed-assembly version detection tests.
 - `src/qt/` — launcher UI, stylesheet, entrypoint, and embedded default config.
+- `src/mods/`, `tests/mods/` — staged mod installation, archive validation, and filesystem tests.
+- `documents/mod-installation.md` — installation design, boundaries, and research sources.
 - `Dockerfile.ci` — non-root Ubuntu Linux build/test image; it is not a production image.
 - `.github/workflows/` — pull-request validation and guarded release workflow definitions.
 - `documents/infrastructure_plan.md` — approved infrastructure decisions.
@@ -34,7 +36,7 @@ Native release maintainers also need their platform packaging tools. macOS distr
 
 ### 2. Configure the native toolchain
 
-With Qt and nlohmann_json available on CMake's search path, configure, build, test, and run:
+With Qt, nlohmann_json, and libarchive development files available on CMake's search path, configure, build, test, and run:
 
 ```bash
 cmake --preset dev
@@ -64,7 +66,7 @@ only; after changing it, restart the launcher. This view does not install mods.
 The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
 For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
 
-On Ubuntu with `qt6-base-dev`, CMake 3.28+, a C++ compiler, and Make installed, Ninja is optional with this alternate build:
+On Ubuntu install `qt6-base-dev`, `nlohmann-json3-dev`, and `libarchive-dev` alongside CMake 3.28+ and a C++ compiler. On macOS libarchive is also available through Homebrew (`brew install libarchive`; pass its prefix as `LibArchive_ROOT` if needed). The vcpkg manifest supplies libarchive on all platforms. With Make installed, Ninja is optional with this alternate build:
 
 ```bash
 cmake -S . -B build/local -G "Unix Makefiles" -DCMAKE_BUILD_TYPE=Debug -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
@@ -77,7 +79,11 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 ### Game path and UI scope
 
-`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
+`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user. In Settings, **Auto Detect Directory** checks the current path first, then common Steam locations on Windows, macOS, and Linux (including Flatpak and Snap), additional libraries from Steam's `libraryfolders.vdf`, and standard GOG locations. It accepts a folder only when the platform's game executable is present. On macOS it selects the bundle root, with the executable under `Contents/MacOS`. The common installation locations follow [SMAPI's game-path discovery](https://github.com/Pathoschild/SMAPI/blob/develop/build/find-game-folder.targets).
+
+Detection fills the path field; **Save game path** persists it. If detection finds nothing, it keeps your current entry and suggests browsing manually. Custom installations outside the supported locations can still be selected with Browse. Use the library's **SMAPI** button to check SMAPI status for the saved game directory in the separate SMAPI window.
+
+The library’s Settings button opens the separate launcher settings window (`settings.ui`). Browse selects a directory; Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
 Edit Instance → Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
@@ -86,9 +92,20 @@ Edit Instance → Settings → Save game path writes a per-user INI override usi
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods browses recently updated Nexus mods; Modpacks remains a preview page. Mod installation and management are not connected. Logs shows launcher activity for the current session, with text search, rather than game output. No game files are copied, installed, or modified. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods provides Installed and Browse Nexus tabs; Modpacks remains a preview page. Logs shows launcher activity, including mod-install results, for the current session, with text search, rather than game output. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
-The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout, reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
+### Install local mods
+
+1. Set the Stardew Valley game directory in **Settings** and save it. Install SMAPI separately and quit the game before changing mods.
+2. On Nexus Mods, use the mod's **Files → Manual download** flow, checking the author's requirements and compatibility notes. The launcher's **Open download page** button opens that Files tab.
+3. Open **Edit Instance → Mods → Installed**. Drop one or more extracted folders or `.zip`, `.7z`, or `.rar` archives onto the page, or use **Choose files…** / **Choose folder…**. This works offline without a Nexus key.
+4. Read the installation result and installed-mod list. Every library entry currently uses the same `Mods` folder. On macOS a configured bundle root resolves to `Contents/MacOS/Mods`.
+
+The installer finds `manifest.json` inside download wrappers and multi-mod bundles, preserves each mod's assets, and copies complete mod folders. Dropping an individual file inside an extracted mod installs its enclosing mod folder. Loose files without a manifest, including standalone DLLs and legacy XNB replacements, receive an explanatory error. Sources are preserved; base-game files are never replaced. These rules follow the [Stardew installation guide](https://stardewvalleywiki.com/Modding:Player_Guide/Getting_Started) and [SMAPI manifest format](https://stardewvalleywiki.com/Modding:Modder_Guide/APIs/Manifest).
+
+The full selection is validated and staged before installation. Existing mod IDs and folder collisions are rejected, so updates require removing the existing copy manually first. Unsafe archive paths, links, encrypted or corrupt archives, and oversized inputs are rejected. Limits per selection are 100,000 entries, 2 GiB of extracted/copied data, 512 MiB per file/archive input, and 64 folder levels. Install SMAPI, Content Patcher, and any other required dependencies separately; the installer does not resolve dependencies or check game-version compatibility. See [the design](documents/mod-installation.md) for details.
+
+The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout (including SMAPI's commented JSON metadata), reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 
@@ -123,7 +140,7 @@ PRISMATIC_SCREENSHOTS=/tmp/prismatic-preview ctest --preset dev --output-on-fail
 ## CI and releases
 
 Pull requests run Linux Docker validation, infrastructure checks, formatting, static analysis, Gitleaks, and CodeQL. Windows and macOS runners install Qt 6.8.3, build the launcher, and run the offscreen Qt tests.
-Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. The Linux image installs `nlohmann-json3-dev` alongside its Qt development packages. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3 and install `nlohmann-json` with the repository-pinned vcpkg revision in classic mode, exposing its prefix through `nlohmann_json_ROOT`. This keeps the prebuilt Qt SDK while supplying the header-only JSON dependency. Windows activates its MSVC 2022 x64 build environment to match the Qt kit. Product targets will extend those validations.
+Pull requests run Linux Docker validation, infrastructure checks, formatting, static-analysis configuration, Gitleaks, and CodeQL. The Linux image installs `nlohmann-json3-dev` and `libarchive-dev` alongside its Qt development packages. Before configuring and building the CMake harness, the Windows and macOS runners install Qt 6.8.3 and install `nlohmann-json` and `libarchive` with the repository-pinned vcpkg revision in classic mode. Native CMake configuration uses vcpkg's toolchain with `VCPKG_MANIFEST_MODE=OFF` and the same `VCPKG_TARGET_TRIPLET` used at installation. This loads vcpkg's package wrappers, including the compression dependencies required to link static libarchive on macOS, while retaining the separately installed Qt SDK. Windows also adds vcpkg's runtime DLL directory to PATH and activates its MSVC 2022 x64 build environment to match the Qt kit.
 
 Tags matching `v*` start the guarded GitHub Release workflow. It intentionally fails before publishing until product-owned `packaging/` scripts exist and the protected `release` environment contains the required Apple notarization configuration. Future releases will publish portable archives: Windows ZIP, macOS ZIP, and Linux `tar.gz`, along with SHA-256 checksums.
 

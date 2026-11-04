@@ -26,6 +26,8 @@ struct SmapiInstallation {
 
 class SmapiDetector {
    public:
+    /// @brief Inspects a SMAPI installation, resolving macOS bundle roots to their executable
+    /// folder.
     [[nodiscard]] SmapiInstallation inspect(const QString& gameDirectory) const;
 
    private:

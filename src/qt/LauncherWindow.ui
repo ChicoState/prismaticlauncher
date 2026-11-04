@@ -37,21 +37,21 @@
      <number>0</number>
     </property>
     <item>
-     <layout class="QHBoxLayout" name="libraryToolbar">
+     <layout class="QVBoxLayout" name="libraryLayout">
       <property name="spacing">
-       <number>8</number>
+       <number>0</number>
       </property>
       <property name="leftMargin">
-       <number>8</number>
+       <number>0</number>
       </property>
       <property name="topMargin">
-       <number>4</number>
+       <number>0</number>
       </property>
       <property name="rightMargin">
-       <number>8</number>
+       <number>0</number>
       </property>
       <property name="bottomMargin">
-       <number>4</number>
+       <number>0</number>
       </property>
       <item>
        <widget class="QPushButton" name="addInstance">
@@ -162,25 +162,6 @@
         </property>
        </widget>
       </item>
-     </layout>
-    </item>
-    <item>
-     <layout class="QVBoxLayout" name="libraryLayout">
-      <property name="spacing">
-       <number>0</number>
-      </property>
-      <property name="leftMargin">
-       <number>0</number>
-      </property>
-      <property name="topMargin">
-       <number>0</number>
-      </property>
-      <property name="rightMargin">
-       <number>0</number>
-      </property>
-      <property name="bottomMargin">
-       <number>0</number>
-      </property>
       <item>
        <widget class="QListWidget" name="instances">
         <property name="accessibleName">
@@ -190,7 +171,7 @@
          <enum>QFrame::Shadow::Plain</enum>
         </property>
         <property name="lineWidth">
-         <number>0</number>
+         <number>1</number>
         </property>
         <property name="iconSize">
          <size>

@@ -12,6 +12,7 @@ class LauncherWindow;
 }
 
 class InstanceWindow;
+class settings;
 class SmapiWindow;
 class QGraphicsOpacityEffect;
 class QLabel;
@@ -29,6 +30,7 @@ class LauncherWindow : public QMainWindow {
     void populateInstances();
     void addInstance();
     void openInstanceWindow(int tab = 0);
+    void openSettingsWindow();
     /// @brief Opens the SMAPI settings window for the configured game directory.
     void openSmapiWindow();
     /// @brief Opens the selected instance and launches it with live console capture.
@@ -45,6 +47,7 @@ class LauncherWindow : public QMainWindow {
     QLabel* farmPackOverlay_ = nullptr;
     QGraphicsOpacityEffect* farmPackOpacityEffect_ = nullptr;
     QPointer<InstanceWindow> instanceWindow_;
+    QPointer<settings> settingsWindow_;
     QPointer<SmapiWindow> smapiWindow_;
     std::unique_ptr<Ui::LauncherWindow> ui_;
 };
