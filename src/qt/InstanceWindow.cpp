@@ -7,9 +7,10 @@
 #include <QProcessEnvironment>
 #include <QSignalBlocker>
 #include <QStatusBar>
+#include <QStringDecoder>
 #include <QTabWidget>
-#include <QTextCursor>
 
+#include "LogWindow.h"
 #include "ModInstallPage.h"
 #include "NexusPage.h"
 #include "SmapiDetector.h"
@@ -50,7 +51,8 @@ void InstanceWindow::connectSignals() {
             mods_->fetchMods();
         }
     });
-    connect(installedMods_, &ModInstallPage::activity, ui_->logs, &QPlainTextEdit::appendPlainText);
+    connect(installedMods_, &ModInstallPage::activity, logWindow_,
+            [this](const QString& message) { logWindow_->appendMessage(message); });
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
     connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
     connect(ui_->openLogs, &QPushButton::clicked, logWindow_, [this] {
@@ -58,22 +60,7 @@ void InstanceWindow::connectSignals() {
         logWindow_->raise();
         logWindow_->activateWindow();
     });
-    connect(ui_->browseGamePath, &QPushButton::clicked, this, [this] {
-        const auto directory = QFileDialog::getExistingDirectory(
-            this, "Select Stardew Valley folder", ui_->gamePath->text());
-        if (!directory.isEmpty()) ui_->gamePath->setText(directory);
-    });
-    connect(ui_->savePath, &QPushButton::clicked, this, [this] {
-        if (!config_->saveGameDirectory(ui_->gamePath->text())) {
-            ui_->pathStatus->setText(
-                "Could not save. Use an absolute path and a writable config location.");
-            return;
-        }
-        refreshPathStatus();
-        installedMods_->refresh();
-        ui_->logs->appendPlainText("Saved game directory: " + config_->gameDirectory());
-        statusBar()->showMessage("Game path saved.");
-    });
+    connect(ui_->openSettings, &QPushButton::clicked, this, &InstanceWindow::settingsRequested);
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
             [this](int index) { emit launchModeChanged(index == 1); });
 }
@@ -108,6 +95,7 @@ void InstanceWindow::refreshPathStatus() {
 
 void InstanceWindow::refreshGameDirectory() {
     refreshPathStatus();
+    installedMods_->refresh();
     logWindow_->appendMessage("Saved game directory: " + config_->gameDirectory());
     statusBar()->showMessage("Game path saved.");
 }

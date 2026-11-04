@@ -15,6 +15,7 @@
 
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
+#include "LogWindow.h"
 #include "ModInstallPage.h"
 
 namespace {
@@ -128,6 +129,33 @@ class ModInstallTests : public QObject {
         QVERIFY(page.findChild<QLabel*>("modInstallDestination")->text().contains(game));
     }
 
+    /// @brief Refreshing the shared path replaces the installed-mod list and destination.
+    void instanceRefreshesModsAfterSharedPathChanges() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        const auto firstGame = temp.filePath("FirstGame");
+        const auto secondGame = temp.filePath("SecondGame");
+        writeFile(firstGame + "/StardewValley.dll", "fixture");
+        writeFile(secondGame + "/StardewValley.dll", "fixture");
+        makeMod(firstGame + "/Mods/Cozy");
+        QVERIFY(config.saveGameDirectory(firstGame));
+        InstanceWindow window("Shared game", true, &config);
+        window.show();
+        auto* page = window.findChild<ModInstallPage*>();
+        QVERIFY(page);
+        page->refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        auto* table = page->findChild<QTableWidget*>("installedMods");
+        QVERIFY(table);
+        QCOMPARE(table->rowCount(), 1);
+        QVERIFY(config.saveGameDirectory(secondGame));
+        window.refreshGameDirectory();
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        QCOMPARE(table->rowCount(), 0);
+        QVERIFY(page->findChild<QLabel*>("modInstallDestination")->text().contains(secondGame));
+    }
+
+    /// @brief Installs into the shared game and records the result in the separate log window.
     void instanceWindowUsesSharedGameAndLogsInstallation() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
@@ -145,8 +173,11 @@ class ModInstallTests : public QObject {
         QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
         page->installSources({temp.filePath("Cozy/Cozy.dll")});
         QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
-        QVERIFY(
-            window.findChild<QPlainTextEdit*>("logs")->toPlainText().contains("Installed 1 mod"));
+        auto* console = window.findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>("logs");
+        QVERIFY(logs);
+        QVERIFY(logs->toPlainText().contains("Installed 1 mod"));
         window.setInstance("Another library entry", true);
         page->refresh();
         QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
