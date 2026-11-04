@@ -111,7 +111,10 @@ void LauncherWindow::connectSignals() {
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
-    connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
+    connect(ui_->editInstance, &QPushButton::clicked, this,
+            [this] { openInstanceWindow(); });
+    connect(ui_->settings, &QPushButton::clicked, this,
+            [this] { openInstanceWindow(3); });
     connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
         if (!config_.saveFarmPackEnabled(enabled)) {
             ui_->farmPackToggle->setChecked(farmPackEnabled_);
