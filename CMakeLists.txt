@@ -30,7 +30,7 @@ add_library(smapi-core STATIC
     src/smapi/SmapiVersion.h
 )
 target_include_directories(smapi-core PUBLIC src/smapi)
-target_link_libraries(smapi-core PUBLIC Qt6::Core)
+target_link_libraries(smapi-core PUBLIC Qt6::Core PRIVATE nlohmann_json::nlohmann_json)
 
 add_subdirectory(src/qt)
 add_subdirectory(src/farmpack)

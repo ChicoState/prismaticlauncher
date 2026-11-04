@@ -1,7 +1,6 @@
 #include "InstanceWindow.h"
 
 #include <QComboBox>
-#include <QFileDialog>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -100,11 +99,17 @@ void InstanceWindow::selectTab(int tab) {
 
 void InstanceWindow::refreshPathStatus() {
     const auto directory = config_->gameDirectory();
-    ui_->gamePath->setText(directory);
-    ui_->pathStatus->setText(
+    const auto message =
         QFileInfo(directory).isDir()
-            ? "Game folder exists. Play checks the selected executable."
-            : "Game folder not found. Set your installation path in Settings.");
+            ? QString("Game folder exists. Play checks the selected executable.")
+            : QString("Game folder not found. Set your installation path in launcher settings.");
+    ui_->pathStatus->setText(directory + "\n" + message);
+}
+
+void InstanceWindow::refreshGameDirectory() {
+    refreshPathStatus();
+    logWindow_->appendMessage("Saved game directory: " + config_->gameDirectory());
+    statusBar()->showMessage("Game path saved.");
 }
 
 void InstanceWindow::launchGame() {

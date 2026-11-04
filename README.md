@@ -79,7 +79,11 @@ Windows builds produce `prismatic-launch.exe` in the build's `bin` directory; ma
 
 ### Game path and UI scope
 
-`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user and performs no automatic path discovery. Other Steam libraries, Snap/Flatpak Steam, and other OS installations require an explicit path in Settings.
+`src/qt/config/defaults.ini` supplies `~/.local/share/Steam/steamapps/common/Stardew Valley`, the conventional Ubuntu Steam location. The launcher expands `~` for the current user. In Settings, **Auto Detect Directory** checks the current path first, then common Steam locations on Windows, macOS, and Linux (including Flatpak and Snap), additional libraries from Steam's `libraryfolders.vdf`, and standard GOG locations. It accepts a folder only when the platform's game executable is present. On macOS it selects the bundle root, with the executable under `Contents/MacOS`. The common installation locations follow [SMAPI's game-path discovery](https://github.com/Pathoschild/SMAPI/blob/develop/build/find-game-folder.targets).
+
+Detection fills the path field; **Save game path** persists it. If detection finds nothing, it keeps your current entry and suggests browsing manually. Custom installations outside the supported locations can still be selected with Browse. Use the library's **SMAPI** button to check SMAPI status for the saved game directory in the separate SMAPI window.
+
+The library’s Settings button opens the separate launcher settings window (`settings.ui`). Browse selects a directory; Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
 Edit Instance → Settings → Save game path writes a per-user INI override using [Qt's settings API](https://doc.qt.io/qt-6/qsettings.html). On Ubuntu the default is `~/.config/Prismatic/Prismatic Launcher/launcher.ini` (or under `XDG_CONFIG_HOME` when set). The UI shows the exact path. Use `--config /absolute/path/launcher.ini` for an alternate configuration file:
 
@@ -101,7 +105,7 @@ The installer finds `manifest.json` inside download wrappers and multi-mod bundl
 
 The full selection is validated and staged before installation. Existing mod IDs and folder collisions are rejected, so updates require removing the existing copy manually first. Unsafe archive paths, links, encrypted or corrupt archives, and oversized inputs are rejected. Limits per selection are 100,000 entries, 2 GiB of extracted/copied data, 512 MiB per file/archive input, and 64 folder levels. Install SMAPI, Content Patcher, and any other required dependencies separately; the installer does not resolve dependencies or check game-version compatibility. See [the design](documents/mod-installation.md) for details.
 
-The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout, reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
+The SMAPI settings dialog performs a read-only check of the configured game directory. It validates the modern SMAPI file layout (including SMAPI's commented JSON metadata), reads the matching version from SMAPI's internal managed assemblies, and reports missing or mismatched components. It never downloads, installs, updates, or modifies SMAPI.
 
 No `.env` file or local service is needed. Do not add secrets, certificates, or game data to the repository.
 

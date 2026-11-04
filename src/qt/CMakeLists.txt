@@ -1,4 +1,5 @@
 qt_add_library(launcher-ui STATIC
+    GameDirectoryDetector.cpp GameDirectoryDetector.h
     LauncherConfig.cpp LauncherConfig.h
     LogWindow.cpp LogWindow.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
@@ -8,8 +9,8 @@ qt_add_library(launcher-ui STATIC
     ModBrowser.cpp ModBrowser.h
     ModInstallPage.cpp ModInstallPage.h
     ../../resources.qrc
+    settings.h settings.cpp settings.ui
     SmapiWindow.h SmapiWindow.cpp SmapiWindow.ui
-
 )
 target_include_directories(launcher-ui PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(launcher-ui PUBLIC Qt6::Widgets farmpack mod-installer smapi-core)
