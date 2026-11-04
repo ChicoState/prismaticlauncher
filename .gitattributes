@@ -1,0 +1,2 @@
+*.sh text eol=lf
+/.github/agents/*.agent.md text eol=lf

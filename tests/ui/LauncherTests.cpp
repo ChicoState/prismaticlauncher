@@ -8,10 +8,11 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
-#include <QSlider>
+#include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
 #include <QSettings>
+#include <QSlider>
 #include <QStackedWidget>
 #include <QTemporaryDir>
 #include <QTimer>
@@ -21,8 +22,9 @@
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
 #include "settings.h"
-#include "SmapiWindow.h"
+#include "LogWindow.h"
 #include "ModBrowser.h"
+#include "SmapiWindow.h"
 
 namespace {
 QVector<NexusModSummary> sampleMods() {
@@ -204,9 +206,8 @@ class LauncherTests : public QObject {
     void modDescriptionReadableText_data() {
         QTest::addColumn<QString>("description");
         QTest::addColumn<QString>("expected");
-        QTest::newRow("html")
-            << "<p><b>Seasonal</b> &amp; cozy</p><p>Install:<br>Copy to Mods.</p>"
-            << "Seasonal & cozy\nInstall:\nCopy to Mods.";
+        QTest::newRow("html") << "<p><b>Seasonal</b> &amp; cozy</p><p>Install:<br>Copy to Mods.</p>"
+                              << "Seasonal & cozy\nInstall:\nCopy to Mods.";
         QTest::newRow("plain") << "First line\n\nSecond line: 1 < 2 & 3 > 2."
                                << "First line\n\nSecond line: 1 < 2 & 3 > 2.";
         QTest::newRow("escaped-tags") << "<p>Use &lt;b&gt; for bold.</p>"
@@ -306,7 +307,8 @@ class LauncherTests : public QObject {
         QCOMPARE(instanceWindow->size(), QSize(820, 600));
         auto* download = browser->findChild<QPushButton*>("modDownload");
         QVERIFY(download->isVisible());
-        const auto buttonRect = QRect(download->mapTo(instanceWindow, QPoint(0, 0)), download->size());
+        const auto buttonRect =
+            QRect(download->mapTo(instanceWindow, QPoint(0, 0)), download->size());
         QVERIFY(instanceWindow->rect().contains(buttonRect));
         if (!screenshots.isEmpty()) {
             QVERIFY(instanceWindow->grab().save(screenshots + "/mods-minimum-sample.png"));
@@ -550,6 +552,7 @@ class LauncherTests : public QObject {
         QVERIFY(warningShown);
     }
 
+    /// @brief Rejects a library launch without SMAPI and records the error in its console.
     void moddedLibraryLaunchRequiresSmapi() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
@@ -569,8 +572,16 @@ class LauncherTests : public QObject {
             if (button->text() == "▶  Play") button->click();
         }
         QVERIFY(warningShown);
+        auto* instanceWindow = window.findChild<InstanceWindow*>();
+        QVERIFY(instanceWindow);
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>();
+        QVERIFY(logs);
+        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
     }
 
+    /// @brief Rejects an instance launch without SMAPI and records the error in its console.
     void moddedInstanceLaunchRequiresSmapi() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
@@ -590,6 +601,11 @@ class LauncherTests : public QObject {
         });
         instanceWindow->findChild<QPushButton*>("playDetailInstance")->click();
         QVERIFY(warningShown);
+        auto* console = instanceWindow->findChild<LogWindow*>();
+        QVERIFY(console);
+        auto* logs = console->findChild<QPlainTextEdit*>();
+        QVERIFY(logs);
+        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
     }
 
     void saveSettings() {

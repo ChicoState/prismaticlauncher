@@ -1,12 +1,14 @@
 #pragma once
 
-#include <memory>
-
 #include <QMainWindow>
+#include <QPointer>
+#include <memory>
 
 #include "LauncherConfig.h"
 
+class LogWindow;
 class NexusPage;
+class QProcess;
 
 namespace Ui {
 class InstanceWindow;
@@ -23,6 +25,8 @@ class InstanceWindow : public QMainWindow {
     void setInstance(const QString& name, bool modded);
     void selectTab(int tab);
     void refreshGameDirectory();
+    /// @brief Validates SMAPI for modded launches, then starts the game with console capture.
+    void launchGame();
 
    signals:
     void launchModeChanged(bool modded);
@@ -31,10 +35,11 @@ class InstanceWindow : public QMainWindow {
    private:
     void connectSignals();
     void refreshPathStatus();
-    void launchGame();
 
     NexusPage* mods_;
     bool modsLoaded_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;
+    LogWindow* logWindow_;
+    QPointer<QProcess> process_;
 };

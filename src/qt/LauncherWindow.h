@@ -1,12 +1,11 @@
 #pragma once
 
-#include <memory>
-
 #include <QMainWindow>
 #include <QPointer>
+#include <memory>
 
-#include "LauncherConfig.h"
 #include "FarmPack.h"
+#include "LauncherConfig.h"
 
 namespace Ui {
 class LauncherWindow;
@@ -32,7 +31,9 @@ class LauncherWindow : public QMainWindow {
     void addInstance();
     void openInstanceWindow(int tab = 0);
     void openSettingsWindow();
+    /// @brief Opens the SMAPI settings window for the configured game directory.
     void openSmapiWindow();
+    /// @brief Opens the selected instance and launches it with live console capture.
     void launchGame();
     void filterInstances(const QString& query);
     void refreshFarmPackOverlay();
