@@ -1,13 +1,17 @@
 #include "settings.h"
 
+#include <QFileDialog>
+#include <QFileInfo>
+#include <utility>
+
 #include "LauncherConfig.h"
 #include "ui_settings.h"
 
-#include <QFileDialog>
-#include <QFileInfo>
-
-settings::settings(LauncherConfig* config, QWidget* parent)
-    : QWidget(parent, Qt::Window), config_(config), ui(new Ui::settings) {
+settings::settings(LauncherConfig* config, QWidget* parent, GameDirectoryDetector detector)
+    : QWidget(parent, Qt::Window),
+      config_(config),
+      detector_(std::move(detector)),
+      ui(new Ui::settings) {
     ui->setupUi(this);
     connect(ui->backLibrary, &QPushButton::clicked, this, [this] {
         close();
@@ -19,6 +23,7 @@ settings::settings(LauncherConfig* config, QWidget* parent)
         if (!directory.isEmpty()) ui->gameDirectoryValue->setText(directory);
     });
     connect(ui->savePath, &QPushButton::clicked, this, &settings::saveGameDirectory);
+    connect(ui->detectDirectory, &QPushButton::clicked, this, &settings::detectGameDirectory);
     reload();
 }
 
@@ -27,10 +32,22 @@ settings::~settings() { delete ui; }
 void settings::reload() {
     const auto directory = config_->gameDirectory();
     ui->gameDirectoryValue->setText(directory);
-    const auto message = QFileInfo(directory).isDir()
-                             ? QString("Game folder exists. Play checks the selected executable.")
-                             : QString("Game folder not found. Choose your installation directory.");
+    const auto message =
+        QFileInfo(directory).isDir()
+            ? QString("Game folder exists. Play checks the selected executable.")
+            : QString("Game folder not found. Choose your installation directory.");
     ui->pathStatus->setText(message + "\nSettings file: " + config_->filePath());
+}
+
+void settings::detectGameDirectory() {
+    const auto directory = detector_.detect(ui->gameDirectoryValue->text());
+    if (directory.isEmpty()) {
+        ui->pathStatus->setText(
+            "Could not detect Stardew Valley. Choose your game folder with Browse.");
+    } else {
+        ui->gameDirectoryValue->setText(directory);
+        ui->pathStatus->setText("Detected game directory. Select Save game path to use it.");
+    }
 }
 
 void settings::saveGameDirectory() {

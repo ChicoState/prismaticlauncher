@@ -93,30 +93,6 @@
       </widget>
      </item>
      <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <property name="leftMargin">
-        <number>20</number>
-       </property>
-       <property name="rightMargin">
-        <number>20</number>
-       </property>
-       <item>
-        <widget class="QLabel" name="statusLabel">
-         <property name="text">
-          <string>SMAPI status</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QLabel" name="statusState">
-         <property name="text">
-          <string>Not checked</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
       <widget class="QPushButton" name="savePath">
        <property name="styleSheet">
         <string notr="true">background-color: rgba(255, 255, 255, 0.4);</string>
@@ -149,6 +125,7 @@
  <tabstops>
   <tabstop>gameDirectoryValue</tabstop>
   <tabstop>browseDirectory</tabstop>
+  <tabstop>detectDirectory</tabstop>
   <tabstop>savePath</tabstop>
  </tabstops>
  <resources/>

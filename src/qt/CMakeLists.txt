@@ -1,4 +1,5 @@
 qt_add_library(launcher-ui STATIC
+    GameDirectoryDetector.cpp GameDirectoryDetector.h
     LauncherConfig.cpp LauncherConfig.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
@@ -28,6 +29,11 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(settings-detection-tests ../../tests/ui/SettingsDetectionTests.cpp)
+    target_link_libraries(settings-detection-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME settings-detection-tests COMMAND settings-detection-tests)
+    set_tests_properties(settings-detection-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     qt_add_executable(mod-pagination-tests ../../tests/ui/ModPaginationTests.cpp)
     target_link_libraries(mod-pagination-tests PRIVATE launcher-ui Qt6::Test)
     add_test(NAME mod-pagination-tests COMMAND mod-pagination-tests)
