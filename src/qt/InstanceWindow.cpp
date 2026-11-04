@@ -26,6 +26,7 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     resize(960, 680);
     mods_ = new NexusPage(ui_->modsPage, false);
     ui_->modsLayout->addWidget(mods_);
+    ui_->logsLayout->addWidget(logWindow_);
     // Keep the sidebar compact so both mod panes fit at the minimum window size.
     ui_->navigation->setFixedWidth(120);
     ui_->bodyLayout->setStretch(1, 1);
@@ -46,11 +47,6 @@ void InstanceWindow::connectSignals() {
     });
     connect(ui_->backToLibrary, &QPushButton::clicked, this, &QWidget::close);
     connect(ui_->playDetailInstance, &QPushButton::clicked, this, &InstanceWindow::launchGame);
-    connect(ui_->openLogs, &QPushButton::clicked, logWindow_, [this] {
-        logWindow_->show();
-        logWindow_->raise();
-        logWindow_->activateWindow();
-    });
     connect(ui_->openSettings, &QPushButton::clicked, this, &InstanceWindow::settingsRequested);
     connect(ui_->launchMode, &QComboBox::currentIndexChanged, this,
             [this](int index) { emit launchModeChanged(index == 1); });
@@ -91,10 +87,11 @@ void InstanceWindow::refreshGameDirectory() {
 }
 
 void InstanceWindow::launchGame() {
+    // Select before validation so duplicate attempts and launch failures share the console.
+    selectTab(ui_->detailPages->indexOf(ui_->logsPage));
     if (process_ && process_->state() != QProcess::NotRunning) {
         logWindow_->appendMessage("A game is already running from this launcher.",
                                   LogWindow::Severity::Warn);
-        logWindow_->show();
         return;
     }
     const auto directory = config_->gameDirectory();
@@ -125,7 +122,7 @@ void InstanceWindow::launchGame() {
         return;
     }
 
-    // Match the experiment's ownership: destroying a window must not kill the game.
+    // The process has no window parent: closing or destroying the UI must not kill the game.
     // The process drains its pipes independently and deletes itself when it exits.
     auto* child = new QProcess;
     process_ = child;
@@ -158,6 +155,10 @@ void InstanceWindow::launchGame() {
         if (console) console->appendMessage("Started " + executable);
         statusBar()->showMessage("Game launched.");
     });
+    // Keep UI navigation bound to the window lifetime, while process cleanup stays independent.
+    connect(child, &QProcess::errorOccurred, this, [this](QProcess::ProcessError) {
+        selectTab(ui_->detailPages->indexOf(ui_->logsPage));
+    });
     connect(child, &QProcess::errorOccurred, child, [child, console](QProcess::ProcessError error) {
         if (console) {
             console->flushOutput();
@@ -166,6 +167,12 @@ void InstanceWindow::launchGame() {
         }
         if (error == QProcess::FailedToStart) child->deleteLater();
     });
+    connect(child, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), this,
+            [this](int exitCode, QProcess::ExitStatus status) {
+                if (status != QProcess::NormalExit || exitCode != 0) {
+                    selectTab(ui_->detailPages->indexOf(ui_->logsPage));
+                }
+            });
     connect(child, qOverload<int, QProcess::ExitStatus>(&QProcess::finished), child,
             [child, console, drainOutput](int exitCode, QProcess::ExitStatus status) {
                 drainOutput();
@@ -181,6 +188,5 @@ void InstanceWindow::launchGame() {
             });
     logWindow_->beginSession();
     logWindow_->appendMessage("Launching " + executable);
-    logWindow_->show();
     child->start(QIODevice::ReadOnly);
 }

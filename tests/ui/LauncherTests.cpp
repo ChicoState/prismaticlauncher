@@ -8,12 +8,12 @@
 #include <QLineEdit>
 #include <QListWidget>
 #include <QMessageBox>
-#include <QPlainTextEdit>
 #include <QPointer>
 #include <QPushButton>
 #include <QSettings>
 #include <QSlider>
 #include <QStackedWidget>
+#include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest>
@@ -21,10 +21,24 @@
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
-#include "settings.h"
 #include "LogWindow.h"
 #include "ModBrowser.h"
 #include "SmapiWindow.h"
+#include "settings.h"
+
+namespace {
+/// @brief Reconstructs the visible level/source/message text for retained console assertions.
+QString consoleText(const QTableWidget* logs) {
+    QStringList lines;
+    for (int row = 0; row < logs->rowCount(); ++row) {
+        if (logs->isRowHidden(row)) continue;
+        lines << QString("[%1] [%2] %3")
+                     .arg(logs->item(row, 1)->text(), logs->item(row, 2)->text(),
+                          logs->item(row, 3)->text());
+    }
+    return lines.join('\n');
+}
+}  // namespace
 
 namespace {
 QVector<NexusModSummary> sampleMods() {
@@ -73,6 +87,36 @@ class LauncherTests : public QObject {
         QVERIFY(style.open(QIODevice::ReadOnly));
         qApp->setStyle("Fusion");
         qApp->setStyleSheet(style.readAll());
+    }
+
+    /// @brief The instance Console tab contains the live console without a standalone log window.
+    void consoleIsEmbeddedInInstanceTab() {
+        QTemporaryDir temp;
+        LauncherWindow window(temp.filePath("launcher.ini"));
+        window.show();
+        window.findChild<QPushButton*>("editInstance")->click();
+        auto* instance = window.findChild<InstanceWindow*>();
+        QVERIFY(instance);
+        auto* navigation = instance->findChild<QListWidget*>("navigation");
+        QVERIFY(navigation);
+        const auto consoleItems = navigation->findItems("Console", Qt::MatchExactly);
+        QCOMPARE(consoleItems.size(), 1);
+        navigation->setCurrentItem(consoleItems.first());
+        auto* console = instance->findChild<LogWindow*>();
+        QVERIFY(console);
+        QVERIFY2(!console->isWindow(), "Console must be embedded rather than a standalone window.");
+        auto* logsPage = instance->findChild<QWidget*>("logsPage");
+        QVERIFY(logsPage && logsPage->isAncestorOf(console));
+        QVERIFY(console->isVisible());
+        QVERIFY(console->findChild<QTableWidget*>("logs"));
+        QVERIFY(console->findChild<QSlider*>("severitySlider"));
+        QVERIFY(console->findChild<QLineEdit*>("logFilter"));
+        QVERIFY(console->findChild<QPushButton*>("clearLogs"));
+        QVERIFY(!instance->findChild<QPushButton*>("openLogs"));
+        console->appendMessage("retained across navigation");
+        navigation->setCurrentRow(0);
+        navigation->setCurrentItem(consoleItems.first());
+        QCOMPARE(console->findChild<QTableWidget*>("logs")->rowCount(), 1);
     }
 
     void browseNexusMods() {
@@ -579,9 +623,9 @@ class LauncherTests : public QObject {
         QVERIFY(instanceWindow);
         auto* console = instanceWindow->findChild<LogWindow*>();
         QVERIFY(console);
-        auto* logs = console->findChild<QPlainTextEdit*>();
+        auto* logs = console->findChild<QTableWidget*>();
         QVERIFY(logs);
-        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
+        QVERIFY(consoleText(logs).contains("SMAPI is not installed"));
     }
 
     /// @brief Rejects an instance launch without SMAPI and records the error in its console.
@@ -606,9 +650,9 @@ class LauncherTests : public QObject {
         QVERIFY(warningShown);
         auto* console = instanceWindow->findChild<LogWindow*>();
         QVERIFY(console);
-        auto* logs = console->findChild<QPlainTextEdit*>();
+        auto* logs = console->findChild<QTableWidget*>();
         QVERIFY(logs);
-        QVERIFY(logs->toPlainText().contains("SMAPI is not installed"));
+        QVERIFY(consoleText(logs).contains("SMAPI is not installed"));
     }
 
     /// @brief Saves the shared game path, updates the instance, and records it in the log window.
@@ -636,10 +680,10 @@ class LauncherTests : public QObject {
         QVERIFY(instanceWindow->findChild<QLabel*>("pathStatus")->text().contains(temp.path()));
         auto* console = instanceWindow->findChild<LogWindow*>();
         QVERIFY(console);
-        auto* logs = console->findChild<QPlainTextEdit*>("logs");
+        auto* logs = console->findChild<QTableWidget*>("logs");
         QVERIFY(logs);
         const auto savedMessage = "Saved game directory: " + temp.path();
-        QCOMPARE(logs->toPlainText().count(savedMessage), 1);
+        QCOMPARE(consoleText(logs).count(savedMessage), 1);
         auto* status = settingsWindow->findChild<QLabel*>("pathStatus");
         QVERIFY(status);
         QVERIFY(status->text().contains("Saved"));
@@ -653,8 +697,9 @@ class LauncherTests : public QObject {
         QVERIFY(!instanceWindow->isVisible());
         LauncherWindow reopened(file);
         reopened.findChild<QPushButton*>("settings")->click();
-        QCOMPARE(reopened.findChild<settings*>()->findChild<QLineEdit*>("gameDirectoryValue")->text(),
-                 temp.path());
+        QCOMPARE(
+            reopened.findChild<settings*>()->findChild<QLineEdit*>("gameDirectoryValue")->text(),
+            temp.path());
     }
 
     void invalidSettingsPathIsNotSaved_data() {
@@ -706,7 +751,8 @@ class LauncherTests : public QObject {
         settingsWindow.findChild<QPushButton*>("browseDirectory")->click();
         QVERIFY(dialogSeen);
         const auto selected = settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->text();
-        QCOMPARE(QFileInfo(selected).canonicalFilePath(), QFileInfo(temp.path()).canonicalFilePath());
+        QCOMPARE(QFileInfo(selected).canonicalFilePath(),
+                 QFileInfo(temp.path()).canonicalFilePath());
         QVERIFY(!QFileInfo::exists(config.filePath()));
         QTimer::singleShot(0, &settingsWindow, [] {
             if (auto* dialog = qobject_cast<QFileDialog*>(QApplication::activeModalWidget())) {
@@ -716,7 +762,6 @@ class LauncherTests : public QObject {
         settingsWindow.findChild<QPushButton*>("browseDirectory")->click();
         QCOMPARE(settingsWindow.findChild<QLineEdit*>("gameDirectoryValue")->text(), selected);
     }
-
 };
 
 QTEST_MAIN(LauncherTests)
