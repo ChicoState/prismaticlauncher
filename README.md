@@ -106,6 +106,26 @@ directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 
 Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods provides Installed and Browse Nexus tabs; Modpacks remains a preview page. Logs shows launcher activity, including mod-install results, for the current session, with text search, rather than game output. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
 
+### Configure ChickPix artwork
+
+Open **Settings → Configure ChickPix**, directly beneath **Save game path**.
+Choose a bundled or custom image by filename. Duplicate pictures and filenames
+appear once; bundled images take precedence over custom copies. The dialog
+previews your changes and lets you enable artwork and adjust
+opacity from 0% to 100%. **Save** applies the changes to the library and remembers
+them for future launches; **Cancel** discards pending edits. The library's
+**ChickPix** button toggles artwork; opacity is configured only in settings.
+
+To add your own pictures, put PNG, JPG/JPEG, or WebP files in a `chickens` folder
+beside `launcher.ini` or beside the launcher executable, then select **Refresh**
+in the dialog. The dialog shows the exact folder locations; no manifest changes
+or rebuild are required. With a custom `--config` path, the first folder follows
+that settings file. Image availability depends on installed Qt image decoders.
+Unsupported, unreadable, oversized files and links outside these folders are
+ignored. Limits are 16 MiB per file, 8192 pixels per dimension, and 16 megapixels.
+If a selected picture disappears or becomes unreadable, ChickPix uses
+the bundled Default artwork until it is restored or you save another choice.
+
 ### Install local mods
 
 1. Set the Stardew Valley game directory in **Settings** and save it. Install SMAPI separately and quit the game before changing mods.

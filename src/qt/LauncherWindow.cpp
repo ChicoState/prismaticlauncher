@@ -1,8 +1,8 @@
 #include "LauncherWindow.h"
 
-#include <QDate>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QFileInfo>
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
@@ -10,17 +10,17 @@
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
-#include <QResizeEvent>
 #include <QResource>
-#include <QSlider>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
 
-#include "settings.h"
+#include "ChickPixImages.h"
 #include "InstanceWindow.h"
 #include "NexusPage.h"
 #include "SmapiDetector.h"
 #include "SmapiWindow.h"
+#include "settings.h"
 #include "ui_AddInstanceDialog.h"
 #include "ui_LauncherWindow.h"
 
@@ -90,19 +90,9 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     farmPackOverlay_->setStyleSheet("background: transparent;");
     farmPackOpacityEffect_ = new QGraphicsOpacityEffect(farmPackOverlay_);
     farmPackOverlay_->setGraphicsEffect(farmPackOpacityEffect_);
+    ui_->centralWidget->installEventFilter(this);
 
-    const auto packResult = FarmPack::load(":/farmpack/manifest.json");
-    if (packResult.has_value()) {
-        farmPack_ = packResult.pack;
-        farmPackLoaded_ = true;
-        farmPackEnabled_ = config_.farmPackEnabled();
-    }
-    ui_->farmPackToggle->setChecked(farmPackEnabled_);
-    ui_->farmPackToggle->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-    ui_->farmPackOpacity->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacityLabel->setEnabled(farmPackLoaded_);
-    farmPackOpacityEffect_->setOpacity(ui_->farmPackOpacity->value() / 100.0);
+    reloadChickPix();
 
     connectSignals();
     populateInstances();
@@ -112,33 +102,23 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->settings, &QPushButton::clicked, this,
-            &LauncherWindow::openSettingsWindow);
-    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
-            &LauncherWindow::filterInstances);
+    connect(ui_->settings, &QPushButton::clicked, this, &LauncherWindow::openSettingsWindow);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
     connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
     connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
         if (!config_.saveFarmPackEnabled(enabled)) {
+            const QSignalBlocker blocker(ui_->farmPackToggle);
             ui_->farmPackToggle->setChecked(farmPackEnabled_);
-            statusBar()->showMessage("Could not save Pack setting.");
+            statusBar()->showMessage("Could not save ChickPix setting.");
             return;
         }
         farmPackEnabled_ = enabled;
         refreshFarmPackOverlay();
         statusBar()->showMessage(enabled ? "ChickPix artwork enabled."
                                          : "ChickPix artwork disabled.");
-    });
-    connect(ui_->farmPackOpacity, &QSlider::valueChanged, this, [this](int value) {
-        farmPackOpacityEffect_->setOpacity(value / 100.0);
-        if (!config_.saveFarmPackOpacityPercent(value)) {
-            ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-            statusBar()->showMessage("Could not save Pack opacity.");
-            return;
-        }
-        refreshFarmPackOverlay();
     });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
     connect(ui_->instances, &QListWidget::itemActivated, this, [this] { openInstanceWindow(); });
@@ -165,14 +145,23 @@ void LauncherWindow::populateInstances() {
     ui_->instances->setCurrentItem(item);
 }
 
+void LauncherWindow::reloadChickPix() {
+    const ChickPixImages images(config_.filePath());
+    const auto selection = images.resolveSelection(config_.farmPackImage(), images.catalog());
+    auto image = images.load(selection);
+    if (image.isNull()) image = images.load(ChickPixImages::defaultImage());
+    farmPackImage_ = QPixmap::fromImage(image);
+    farmPackLoaded_ = !farmPackImage_.isNull();
+    farmPackEnabled_ = config_.farmPackEnabled();
+    const QSignalBlocker toggleBlocker(ui_->farmPackToggle);
+    ui_->farmPackToggle->setChecked(farmPackEnabled_);
+    ui_->farmPackToggle->setEnabled(farmPackLoaded_);
+    farmPackOpacityEffect_->setOpacity(config_.farmPackOpacityPercent() / 100.0);
+    refreshFarmPackOverlay();
+}
+
 void LauncherWindow::refreshFarmPackOverlay() {
     if (!farmPackLoaded_ || !farmPackEnabled_) {
-        farmPackOverlay_->hide();
-        return;
-    }
-
-    const QPixmap source(farmPack_.imageForDate(QDate::currentDate()));
-    if (source.isNull()) {
         farmPackOverlay_->hide();
         return;
     }
@@ -180,8 +169,8 @@ void LauncherWindow::refreshFarmPackOverlay() {
     const auto* central = ui_->centralWidget;
     const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
     const int targetHeight = qMax(220, central->height() * 55 / 100);
-    const auto image =
-        source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    const auto image = farmPackImage_.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
+                                             Qt::SmoothTransformation);
     farmPackOverlay_->setPixmap(image);
     farmPackOverlay_->adjustSize();
     farmPackOverlay_->move(central->width() - farmPackOverlay_->width() - 20,
@@ -257,6 +246,7 @@ void LauncherWindow::openInstanceWindow(int tab) {
 void LauncherWindow::openSettingsWindow() {
     if (!settingsWindow_) {
         settingsWindow_ = new settings(&config_, this);
+        connect(settingsWindow_, &settings::chickPixChanged, this, &LauncherWindow::reloadChickPix);
         connect(settingsWindow_, &settings::gameDirectoryChanged, this, [this] {
             if (instanceWindow_) instanceWindow_->refreshGameDirectory();
             statusBar()->showMessage("Game path saved.");
@@ -285,7 +275,11 @@ void LauncherWindow::launchGame() {
     instanceWindow_->launchGame();
 }
 
-void LauncherWindow::resizeEvent(QResizeEvent* event) {
-    QMainWindow::resizeEvent(event);
-    refreshFarmPackOverlay();
+bool LauncherWindow::eventFilter(QObject* watched, QEvent* event) {
+    if (farmPackOverlay_ && watched == ui_->centralWidget &&
+        (event->type() == QEvent::Resize || event->type() == QEvent::Show)) {
+        // The library gets its actual geometry after the main window's resize event.
+        refreshFarmPackOverlay();
+    }
+    return QMainWindow::eventFilter(watched, event);
 }
