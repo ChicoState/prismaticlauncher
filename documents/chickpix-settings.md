@@ -57,6 +57,14 @@ Keep changes within ChickPix application code, tests, and user documentation.
 Preserve local Qt Creator files. Do not stage, commit, publish, change
 infrastructure decisions, or expand into unrelated launcher features.
 
+## Catalog cost
+
+Bundled image fingerprints are computed once per process and reused across
+catalog scans and selection resolution. Only the small digests are retained;
+custom images are always validated again so Refresh reflects edits and deletions.
+This reduces repeated image decoding in both the application and widget tests
+without disabling artwork or skipping rendering coverage.
+
 ## Startup geometry
 
 Watch the library page's Resize and Show events when positioning the artwork.

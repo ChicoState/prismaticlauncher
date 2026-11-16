@@ -22,6 +22,8 @@ class ChickPixImages {
     [[nodiscard]] static QString defaultImage();
 
    private:
+    /// @brief Reuses immutable bundled fingerprints and freshly validates custom image pixels.
+    [[nodiscard]] QByteArray fingerprint(const QString& selection) const;
     /// @brief Resolves a bundled identifier or custom path confined to its allowed folder.
     [[nodiscard]] QString allowedPath(const QString& selection) const;
     QStringList folders_;

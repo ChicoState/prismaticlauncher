@@ -4,6 +4,7 @@
 #include <QCryptographicHash>
 #include <QDir>
 #include <QFileInfo>
+#include <QHash>
 #include <QImageReader>
 #include <QResource>
 #include <QSet>
@@ -93,13 +94,11 @@ QStringList ChickPixImages::catalog() const {
     for (const auto& path : candidates) {
         const auto filename = QFileInfo(path).fileName().toCaseFolded();
         if (filenames.contains(filename)) continue;
-        const auto image = load(path);
-        if (image.isNull()) continue;
-        const auto fingerprint = imageFingerprint(image);
-        if (fingerprints.contains(fingerprint)) continue;
+        const auto imageKey = fingerprint(path);
+        if (imageKey.isEmpty() || fingerprints.contains(imageKey)) continue;
         images.append(path);
         filenames.insert(filename);
-        fingerprints.insert(fingerprint);
+        fingerprints.insert(imageKey);
     }
     return images;
 }
@@ -108,12 +107,10 @@ QString ChickPixImages::resolveSelection(const QString& selection,
                                          const QStringList& catalog) const {
     if (selection.isEmpty()) return defaultImage();
     if (catalog.contains(selection)) return selection;
-    const auto selectedImage = load(selection);
-    if (!selectedImage.isNull()) {
-        const auto selectedFingerprint = imageFingerprint(selectedImage);
-        const auto duplicate = std::ranges::find_if(catalog, [&](const QString& path) {
-            return imageFingerprint(load(path)) == selectedFingerprint;
-        });
+    const auto selectedFingerprint = fingerprint(selection);
+    if (!selectedFingerprint.isEmpty()) {
+        const auto duplicate = std::ranges::find_if(
+            catalog, [&](const QString& path) { return fingerprint(path) == selectedFingerprint; });
         if (duplicate != catalog.cend()) return *duplicate;
     }
     const auto selectedName = QFileInfo(selection).fileName();
@@ -125,3 +122,23 @@ QString ChickPixImages::resolveSelection(const QString& selection,
 }
 
 QString ChickPixImages::defaultImage() { return bundledImages.first(); }
+
+QByteArray ChickPixImages::fingerprint(const QString& selection) const {
+    if (!bundledImages.contains(selection)) {
+        const auto image = load(selection);
+        if (image.isNull()) return {};
+        return imageFingerprint(image);
+    }
+
+    // Resource pixels never change during the process; keep only their small digests.
+    // Custom files deliberately bypass this cache so edits and deletions remain visible.
+    static const QHash<QString, QByteArray> bundledFingerprints = [this] {
+        QHash<QString, QByteArray> fingerprints;
+        for (const auto& path : bundledImages) {
+            const auto image = load(path);
+            if (!image.isNull()) fingerprints.insert(path, imageFingerprint(image));
+        }
+        return fingerprints;
+    }();
+    return bundledFingerprints.value(selection);
+}

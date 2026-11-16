@@ -458,7 +458,7 @@ class ChickPixTests : public QObject {
         QCOMPARE(images->findData(cwdChicken), -1);
     }
 
-    /// @brief Refresh discovers a newly added chicken and retains the current image selection.
+    /// @brief Refresh reflects added, edited, and deleted custom images while retaining selection.
     void refreshDiscoversNewImageWithoutLosingSelection() {
         QTemporaryDir temporary;
         QVERIFY(temporary.isValid());
@@ -481,6 +481,14 @@ class ChickPixTests : public QObject {
         refresh->click();
         QVERIFY(images->findData(added) >= 0);
         QCOMPARE(images->currentData().toString(), first);
+        // Refresh must reread custom pixels even when the filename and dimensions stay the same.
+        QVERIFY(writeChicken(first, QColor(40, 70, 210)));
+        refresh->click();
+        QCOMPARE(images->currentData().toString(), first);
+        QVERIFY(displaysImage(preview, first));
+        QVERIFY(QFile::remove(added));
+        refresh->click();
+        QCOMPARE(images->findData(added), -1);
     }
 
     /// @brief Cancel discards staged image, opacity, and visibility edits without touching the INI.
