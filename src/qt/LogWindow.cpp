@@ -1,31 +1,31 @@
 #include "LogWindow.h"
 
+#include <QAction>
+#include <QApplication>
+#include <QClipboard>
 #include <QColor>
 #include <QFontDatabase>
 #include <QHBoxLayout>
+#include <QHeaderView>
 #include <QLabel>
 #include <QLineEdit>
-#include <QPlainTextEdit>
+#include <QMenu>
 #include <QPushButton>
 #include <QRegularExpression>
 #include <QScrollBar>
 #include <QSlider>
-#include <QTextCharFormat>
-#include <QTextCursor>
-#include <QTextDocument>
+#include <QTableWidget>
 #include <QVBoxLayout>
+#include <algorithm>
+#include <set>
 #include <utility>
 
 LogWindow::LogWindow(QWidget* parent)
-    : QDialog(parent),
-      m_logs(new QPlainTextEdit(this)),
+    : QWidget(parent),
+      m_logs(new QTableWidget(this)),
       m_severitySlider(new QSlider(Qt::Horizontal, this)),
       m_thresholdLabel(new QLabel(this)),
       m_logFilter(new QLineEdit(this)) {
-    setWindowTitle(tr("Game log"));
-    resize(980, 600);
-    setMinimumSize(560, 320);
-
     m_severitySlider->setObjectName("severitySlider");
     m_severitySlider->setRange(static_cast<int>(Severity::Trace),
                                static_cast<int>(Severity::Fatal));
@@ -54,17 +54,52 @@ LogWindow::LogWindow(QWidget* parent)
     filters->addWidget(clearButton);
 
     m_logs->setObjectName("logs");
-    m_logs->setReadOnly(true);
-    m_logs->setUndoRedoEnabled(false);
-    m_logs->setLineWrapMode(QPlainTextEdit::NoWrap);
+    m_logs->setColumnCount(4);
+    m_logs->setHorizontalHeaderLabels({tr("Timestamp"), tr("Level"), tr("Source"), tr("Message")});
+    m_logs->setEditTriggers(QAbstractItemView::NoEditTriggers);
+    m_logs->setSelectionMode(QAbstractItemView::ExtendedSelection);
+    m_logs->setSelectionBehavior(QAbstractItemView::SelectItems);
+    m_logs->setWordWrap(false);
+    m_logs->setVerticalScrollMode(QAbstractItemView::ScrollPerPixel);
+    m_logs->setShowGrid(true);
     m_logs->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     m_logs->setAccessibleName(tr("Game and mod log output"));
-    m_logs->setPlaceholderText(
-        tr("Game and mod output will appear here when you launch an instance."));
-    m_logs->setStyleSheet(QStringLiteral(
-        "QPlainTextEdit { background-color: #15191f; color: #dce3eb; "
-        "selection-background-color: #375a7f; border: 1px solid #424b57; padding: 8px; }"));
-    m_logs->document()->setMaximumBlockCount(maximumEntries);
+    m_logs->verticalHeader()->hide();
+    m_logs->verticalHeader()->setDefaultSectionSize(24);
+    auto* header = m_logs->horizontalHeader();
+    header->setSectionsClickable(true);
+    // Header gestures sort records; Qt's default column-selection gesture would alter diagnostics.
+    disconnect(header, &QHeaderView::sectionPressed, m_logs, nullptr);
+    disconnect(header, &QHeaderView::sectionEntered, m_logs, nullptr);
+    header->setSortIndicatorShown(true);
+    header->setSortIndicator(0, Qt::AscendingOrder);
+    header->setSectionResizeMode(QHeaderView::Interactive);
+    header->setStretchLastSection(true);
+    m_logs->setColumnWidth(0, 120);
+    m_logs->setColumnWidth(1, 85);
+    m_logs->setColumnWidth(2, 160);
+    m_logs->setStyleSheet(
+        QStringLiteral("QTableWidget { background-color: #15191f; color: #dce3eb; "
+                       "selection-background-color: #375a7f; gridline-color: #424b57; "
+                       "border: 1px solid #424b57; } "
+                       "QHeaderView::section { border: 0; border-right: 1px solid #697582; "
+                       "border-bottom: 1px solid #697582; padding: 4px; }"));
+    connect(header, &QHeaderView::sectionClicked, this, &LogWindow::sortByColumn);
+
+    auto* copyAction = new QAction(tr("Copy"), m_logs);
+    copyAction->setShortcut(QKeySequence::Copy);
+    copyAction->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    m_logs->addAction(copyAction);
+    connect(copyAction, &QAction::triggered, this, &LogWindow::copySelection);
+    m_logs->setContextMenuPolicy(Qt::CustomContextMenu);
+    connect(m_logs, &QWidget::customContextMenuRequested, this,
+            [this, copyAction](const QPoint& position) {
+                QMenu menu(m_logs);
+                copyAction->setEnabled(!m_logs->selectedItems().isEmpty());
+                menu.addAction(copyAction);
+                menu.exec(m_logs->viewport()->mapToGlobal(position));
+                copyAction->setEnabled(true);
+            });
 
     auto* description =
         new QLabel(tr("Latest 5,000 lines retained • Filters apply to retained history"), this);
@@ -238,8 +273,19 @@ void LogWindow::consumeLine(const QString& line, bool parsePrefix) {
     static const QRegularExpression sourcePrefix(QStringLiteral(R"(^\[([^\]]+)\] ?(.*)$)"));
 
     QString message = line;
+    QTime timestamp = QTime::currentTime();
     if (parsePrefix) {
         auto match = timestampPrefix.match(line);
+        if (match.hasMatch()) {
+            const QString timeText = line.mid(1, match.capturedStart(1) - 1).trimmed();
+            const QStringList timeParts = timeText.split(QLatin1Char('.'));
+            const QTime seconds = QTime::fromString(timeParts.front(), QStringLiteral("H:mm:ss"));
+            const int milliseconds =
+                timeParts.size() > 1
+                    ? timeParts.at(1).left(3).leftJustified(3, QLatin1Char('0')).toInt()
+                    : 0;
+            if (seconds.isValid()) timestamp = seconds.addMSecs(milliseconds);
+        }
         if (!match.hasMatch()) match = bepinexPrefix.match(line);
         if (match.hasMatch()) {
             m_lastSeverity = parseSeverity(match.captured(1));
@@ -255,21 +301,54 @@ void LogWindow::consumeLine(const QString& line, bool parsePrefix) {
         }
     }
     if (m_lastSource.isEmpty()) m_lastSource = QStringLiteral("Game");
-    appendEntry({m_lastSeverity, m_lastSource, message});
+    appendEntry({m_lastSeverity, m_lastSource, message, timestamp});
+}
+
+LogWindow::ViewportState LogWindow::captureViewport() const {
+    const auto* scrollBar = m_logs->verticalScrollBar();
+    ViewportState state;
+    state.scrollPosition = scrollBar->value();
+    state.atBottom = state.scrollPosition == scrollBar->maximum();
+    const int topRow = m_logs->rowAt(0);
+    if (topRow >= 0 && topRow < static_cast<int>(m_visibleEntries.size())) {
+        state.topSequence = m_visibleEntries.at(topRow).sequence;
+        state.topOffset = m_logs->rowViewportPosition(topRow);
+    }
+    return state;
+}
+
+void LogWindow::restoreViewport(const ViewportState& state) {
+    if (state.atBottom) {
+        // Resolve deferred row layout before finding the new end of the table.
+        m_logs->scrollToBottom();
+        return;
+    }
+    m_logs->doItemsLayout();
+    int position = state.scrollPosition;
+    if (state.topSequence) {
+        const auto entry = std::find_if(
+            m_visibleEntries.begin(), m_visibleEntries.end(),
+            [&state](const Entry& visible) { return visible.sequence == *state.topSequence; });
+        if (entry != m_visibleEntries.end()) {
+            const int row = static_cast<int>(entry - m_visibleEntries.begin());
+            position = m_logs->verticalHeader()->sectionPosition(row) - state.topOffset;
+        }
+    }
+    // If the anchor itself expired or was filtered out, keep the nearest available position.
+    m_logs->verticalScrollBar()->setValue(position);
 }
 
 void LogWindow::appendEntry(Entry entry) {
-    auto* scrollBar = m_logs->verticalScrollBar();
-    const int previousPosition = scrollBar->value();
-    const bool wasAtBottom = previousPosition == scrollBar->maximum();
-    // Remove expired visible entries even when the incoming entry is filtered out.
+    const ViewportState viewport = captureViewport();
+    entry.sequence = m_nextSequence++;
+    // Expiration follows arrival order even when the table has another sort order.
     if (m_entries.size() == maximumEntries) {
-        if (matchesFilters(m_entries.front())) removeFirstVisibleEntry();
+        removeVisibleEntry(m_entries.front().sequence);
         m_entries.pop_front();
     }
     m_entries.push_back(std::move(entry));
     if (matchesFilters(m_entries.back())) appendVisibleEntry(m_entries.back());
-    scrollBar->setValue(wasAtBottom ? scrollBar->maximum() : previousPosition);
+    restoreViewport(viewport);
 }
 
 bool LogWindow::matchesFilters(const Entry& entry) const {
@@ -278,38 +357,115 @@ bool LogWindow::matchesFilters(const Entry& entry) const {
     return query.isEmpty() || displayText(entry).contains(query, Qt::CaseInsensitive);
 }
 
-void LogWindow::appendVisibleEntry(const Entry& entry) {
-    QTextCursor cursor(m_logs->document());
-    cursor.movePosition(QTextCursor::End);
-    if (m_visibleEntries > 0) cursor.insertBlock();
-    QTextCharFormat format;
-    format.setForeground(severityColor(entry.severity));
-    cursor.insertText(displayText(entry), format);
-    ++m_visibleEntries;
+bool LogWindow::entryPrecedes(const Entry& left, const Entry& right) const {
+    int comparison = 0;
+    switch (m_sortColumn) {
+        case 0:
+            comparison =
+                left.timestamp.msecsSinceStartOfDay() - right.timestamp.msecsSinceStartOfDay();
+            break;
+        case 1:
+            comparison = static_cast<int>(left.severity) - static_cast<int>(right.severity);
+            break;
+        case 2:
+            comparison = QString::compare(left.source, right.source, Qt::CaseInsensitive);
+            break;
+        case 3:
+            comparison = QString::compare(left.message, right.message, Qt::CaseInsensitive);
+            break;
+    }
+    // Arrival ties stay stable in both directions rather than reversing with the key.
+    if (comparison == 0) return left.sequence < right.sequence;
+    return m_sortOrder == Qt::AscendingOrder ? comparison < 0 : comparison > 0;
 }
 
-void LogWindow::removeFirstVisibleEntry() {
-    if (m_visibleEntries == 0) return;
-    QTextCursor cursor(m_logs->document());
-    cursor.movePosition(QTextCursor::Start);
-    cursor.select(QTextCursor::BlockUnderCursor);
-    cursor.removeSelectedText();
-    if (m_visibleEntries > 1) cursor.deleteChar();
-    --m_visibleEntries;
+void LogWindow::appendVisibleEntry(const Entry& entry) {
+    const auto position = std::lower_bound(
+        m_visibleEntries.begin(), m_visibleEntries.end(), entry,
+        [this](const Entry& left, const Entry& right) { return entryPrecedes(left, right); });
+    const int row = static_cast<int>(position - m_visibleEntries.begin());
+    m_visibleEntries.insert(position, entry);
+    m_logs->insertRow(row);
+    const QStringList cells{entry.timestamp.toString(QStringLiteral("HH:mm:ss.zzz")),
+                            severityName(entry.severity), entry.source, entry.message};
+    for (int column = 0; column < cells.size(); ++column) {
+        auto* item = new QTableWidgetItem(cells.at(column));
+        item->setFlags(item->flags() & ~Qt::ItemIsEditable);
+        item->setForeground(severityColor(entry.severity));
+        m_logs->setItem(row, column, item);
+    }
+}
+
+void LogWindow::removeVisibleEntry(quint64 sequence) {
+    const auto position =
+        std::find_if(m_visibleEntries.begin(), m_visibleEntries.end(),
+                     [sequence](const Entry& entry) { return entry.sequence == sequence; });
+    if (position == m_visibleEntries.end()) return;
+    m_logs->removeRow(static_cast<int>(position - m_visibleEntries.begin()));
+    m_visibleEntries.erase(position);
 }
 
 void LogWindow::rebuildVisibleEntries() {
-    auto* scrollBar = m_logs->verticalScrollBar();
-    const int previousPosition = scrollBar->value();
-    const bool wasAtBottom = previousPosition == scrollBar->maximum();
+    const ViewportState viewport = captureViewport();
+    using CellIdentity = std::pair<quint64, int>;
+    std::set<CellIdentity> selectedCells;
+    for (const auto* item : m_logs->selectedItems()) {
+        selectedCells.emplace(m_visibleEntries.at(item->row()).sequence, item->column());
+    }
+    std::optional<CellIdentity> currentCell;
+    if (const auto* item = m_logs->currentItem()) {
+        currentCell = CellIdentity{m_visibleEntries.at(item->row()).sequence, item->column()};
+    }
     m_logs->setUpdatesEnabled(false);
-    m_logs->clear();
-    m_visibleEntries = 0;
+    m_logs->setRowCount(0);
+    m_visibleEntries.clear();
     for (const Entry& entry : m_entries) {
         if (matchesFilters(entry)) appendVisibleEntry(entry);
     }
-    scrollBar->setValue(wasAtBottom ? scrollBar->maximum() : previousPosition);
+    // Cell identity survives reordering; filtering drops only identities no longer visible.
+    for (int row = 0; row < static_cast<int>(m_visibleEntries.size()); ++row) {
+        const quint64 sequence = m_visibleEntries.at(row).sequence;
+        for (int column = 0; column < m_logs->columnCount(); ++column) {
+            if (selectedCells.contains({sequence, column})) {
+                m_logs->item(row, column)->setSelected(true);
+            }
+        }
+        if (currentCell && currentCell->first == sequence) {
+            m_logs->setCurrentCell(row, currentCell->second, QItemSelectionModel::NoUpdate);
+        }
+    }
+    restoreViewport(viewport);
     m_logs->setUpdatesEnabled(true);
+}
+
+void LogWindow::sortByColumn(int column) {
+    if (m_lastClickedColumn != column) {
+        m_sortColumn = column;
+        m_sortOrder = Qt::AscendingOrder;
+    } else if (m_sortOrder == Qt::AscendingOrder) {
+        m_sortOrder = Qt::DescendingOrder;
+    } else if (column == 0) {
+        m_sortOrder = Qt::AscendingOrder;
+    } else {
+        m_sortColumn = 0;
+        m_sortOrder = Qt::AscendingOrder;
+    }
+    m_lastClickedColumn = m_sortColumn == column ? column : -1;
+    m_logs->horizontalHeader()->setSortIndicator(m_sortColumn, m_sortOrder);
+    rebuildVisibleEntries();
+}
+
+void LogWindow::copySelection() const {
+    QStringList rows;
+    for (int row = 0; row < m_logs->rowCount(); ++row) {
+        QStringList cells;
+        for (int column = 0; column < m_logs->columnCount(); ++column) {
+            const auto* item = m_logs->item(row, column);
+            if (item && item->isSelected()) cells.append(item->text());
+        }
+        if (!cells.isEmpty()) rows.append(cells.join(QLatin1Char('\t')));
+    }
+    if (!rows.isEmpty()) QApplication::clipboard()->setText(rows.join(QLatin1Char('\n')));
 }
 
 void LogWindow::clearHistory() {
@@ -319,8 +475,8 @@ void LogWindow::clearHistory() {
     m_lastSeverity = Severity::Info;
     m_skipLineFeed = false;
     m_fragmentedLine = false;
-    m_visibleEntries = 0;
-    m_logs->clear();
+    m_visibleEntries.clear();
+    m_logs->setRowCount(0);
 }
 
 void LogWindow::updateThresholdLabel() {
