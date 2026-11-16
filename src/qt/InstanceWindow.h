@@ -8,6 +8,8 @@
 
 class LogWindow;
 class NexusPage;
+class ModInstallPage;
+class QTabWidget;
 class QProcess;
 
 namespace Ui {
@@ -29,8 +31,8 @@ class InstanceWindow : public QMainWindow {
     void setInstance(const QString& name, bool modded);
     /// @brief Selects a valid instance page and lazily loads mods on their first selection.
     void selectTab(int tab);
-    /// @brief Refreshes the shared game path and records the saved directory in the embedded
-    /// console.
+    /// @brief Refreshes the shared game path and installed mods, and logs the saved directory in
+    /// the embedded console.
     void refreshGameDirectory();
     /// @brief Selects Console, validates the executable and SMAPI, and starts asynchronous output
     /// capture. The game process outlives this window; UTF-8 fragments retain decoder state until
@@ -50,6 +52,8 @@ class InstanceWindow : public QMainWindow {
     void refreshPathStatus();
 
     NexusPage* mods_;
+    ModInstallPage* installedMods_;
+    QTabWidget* modTabs_;
     bool modsLoaded_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;

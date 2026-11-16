@@ -14,6 +14,8 @@ include(CTest)
 
 find_package(Qt6 REQUIRED COMPONENTS Core Network Test Widgets)
 find_package(nlohmann_json CONFIG REQUIRED)
+find_package(LibArchive REQUIRED)
+
 qt_standard_project_setup()
 
 add_library(smapi-core STATIC
@@ -32,6 +34,7 @@ target_link_libraries(smapi-core PUBLIC Qt6::Core PRIVATE nlohmann_json::nlohman
 
 add_subdirectory(src/qt)
 add_subdirectory(src/farmpack)
+add_subdirectory(src/mods)
 
 if(BUILD_TESTING)
     qt_add_executable(smapi-tests tests/smapi/SmapiDetectorTests.cpp)

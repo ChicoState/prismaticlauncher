@@ -50,6 +50,37 @@ class SmapiDetectorTests : public QObject {
         QCOMPARE(installation.version->toString(), QString("4.5.2"));
     }
 
+    /// @brief Detects SMAPI when its metadata contains comments and literal comment-like strings.
+    void acceptsCommentedMetadata() {
+        QTemporaryDir temp;
+        const QByteArray metadata =
+            "{ /* Bundled SMAPI metadata */\n"
+            "  // Comments are supported by SMAPI.\n"
+            "  \"Mods\": { \"Url\": \"https://example.com/*literal*/\" }\n"
+            "}";
+        QVERIFY(createSmapiFixture(temp.path(), {4, 5, 2}, {4, 5, 2}, metadata));
+
+        const auto installation = SmapiDetector().inspect(temp.path());
+        QVERIFY2(installation.isInstalled(), qPrintable(installation.diagnostic));
+        QCOMPARE(installation.version->toString(), QString("4.5.2"));
+    }
+
+#ifdef Q_OS_MACOS
+    /// @brief Detects SMAPI inside a macOS bundle when given the bundle root.
+    void detectsMacBundleInstallation() {
+        QTemporaryDir temp;
+        const auto bundle = temp.filePath("Stardew Valley.app");
+        const auto executableDirectory = QDir(bundle).filePath("Contents/MacOS");
+        QVERIFY(createSmapiFixture(executableDirectory, {4, 5, 2}, {4, 5, 2}));
+
+        const auto installation = SmapiDetector().inspect(bundle);
+        QVERIFY2(installation.isInstalled(), qPrintable(installation.diagnostic));
+        QCOMPARE(installation.gameDirectory, executableDirectory);
+        QCOMPARE(installation.executablePath,
+                 QDir(executableDirectory).filePath("StardewModdingAPI"));
+    }
+#endif
+
     void reportsNotInstalledForPlainDirectory() {
         QTemporaryDir temp;
 

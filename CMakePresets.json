@@ -32,6 +32,16 @@
         "CMAKE_CXX_FLAGS": "--coverage -O0 -g",
         "CMAKE_EXE_LINKER_FLAGS": "--coverage"
       }
+    },
+    {
+      "name": "dev-vcpkg",
+      "inherits": "dev",
+      "displayName": "Developer build with automatic vcpkg dependencies",
+      "toolchainFile": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+      "cacheVariables": {
+        "VCPKG_MANIFEST_MODE": "ON",
+        "VCPKG_MANIFEST_INSTALL": "ON"
+      }
     }
   ],
   "buildPresets": [
@@ -42,6 +52,10 @@
     {
       "name": "coverage",
       "configurePreset": "coverage"
+    },
+    {
+      "name": "dev-vcpkg",
+      "configurePreset": "dev-vcpkg"
     }
   ],
   "testPresets": [
@@ -55,6 +69,13 @@
     {
       "name": "coverage",
       "configurePreset": "coverage",
+      "output": {
+        "outputOnFailure": true
+      }
+    },
+    {
+      "name": "dev-vcpkg",
+      "configurePreset": "dev-vcpkg",
       "output": {
         "outputOnFailure": true
       }

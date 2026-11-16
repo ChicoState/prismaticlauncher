@@ -3,9 +3,8 @@
 #include <QDir>
 #include <QFile>
 #include <QFileInfo>
-#include <QJsonDocument>
-#include <QJsonParseError>
 #include <QStringList>
+#include <nlohmann/json.hpp>
 
 namespace {
 constexpr qint64 kMaximumMetadataSize = 16 * 1024 * 1024;
@@ -50,6 +49,7 @@ QStringList missingFiles(const QDir& gameDirectory) {
     return missing;
 }
 
+/// @brief Validates SMAPI's commented JSON metadata and explains unreadable or invalid input.
 bool hasValidMetadata(const QDir& internal, QString* diagnostic) {
     const QFileInfo metadataFile(internal.filePath("metadata.json"));
     if (!metadataFile.isFile() || metadataFile.size() > kMaximumMetadataSize) {
@@ -62,9 +62,16 @@ bool hasValidMetadata(const QDir& internal, QString* diagnostic) {
         *diagnostic = "smapi-internal/metadata.json could not be read.";
         return false;
     }
-    QJsonParseError parseError;
-    const auto document = QJsonDocument::fromJson(file.readAll(), &parseError);
-    if (parseError.error != QJsonParseError::NoError || !document.isObject()) {
+    const auto data = file.read(kMaximumMetadataSize + 1);
+    if (data.size() > kMaximumMetadataSize) {
+        *diagnostic = "smapi-internal/metadata.json is too large.";
+        return false;
+    }
+    // SMAPI ships comments in this file, so strict JSON parsing rejects valid installations.
+    const auto document =
+        nlohmann::json::parse(data.cbegin(), data.cend(), nullptr,
+                              /*allow_exceptions=*/false, /*ignore_comments=*/true);
+    if (!document.is_object()) {
         *diagnostic = "smapi-internal/metadata.json is not valid JSON.";
         return false;
     }
@@ -82,7 +89,11 @@ SmapiInstallation SmapiDetector::inspect(const QString& gameDirectory) const {
         return result;
     }
 
-    const QDir gameDir(gameInfo.absoluteFilePath());
+    QDir gameDir(gameInfo.absoluteFilePath());
+#ifdef Q_OS_MACOS
+    // Directory discovery returns the bundle root used by the launcher.
+    if (gameDir.cd("Contents/MacOS")) result.gameDirectory = gameDir.absolutePath();
+#endif
 #ifdef Q_OS_WIN
     result.executablePath = gameDir.filePath("StardewModdingAPI.exe");
 #else

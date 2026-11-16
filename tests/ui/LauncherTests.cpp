@@ -13,11 +13,13 @@
 #include <QSettings>
 #include <QSlider>
 #include <QStackedWidget>
+#include <QTabWidget>
 #include <QTableWidget>
 #include <QTemporaryDir>
 #include <QTimer>
 #include <QtTest>
 
+#include "../smapi/SmapiFixture.h"
 #include "InstanceWindow.h"
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
@@ -321,6 +323,7 @@ class LauncherTests : public QObject {
         window.findChild<QPushButton*>("editInstance")->click();
         auto* instanceWindow = window.findChild<InstanceWindow*>();
         QVERIFY(instanceWindow);
+        instanceWindow->findChild<QTabWidget*>("modViews")->setCurrentIndex(1);
         auto* browser = instanceWindow->findChild<ModBrowser*>();
         QVERIFY(browser);
         browser->setMods(sampleMods());
@@ -579,6 +582,42 @@ class LauncherTests : public QObject {
         QVERIFY(smapiWindow->findChild<QLabel*>("stateLabel")
                     ->text()
                     .contains("not installed", Qt::CaseInsensitive));
+    }
+
+    /// @brief Shows a valid installation in the SMAPI window and rechecks it on reopening.
+    void smapiWindowDetectsSavedInstallation() {
+        QTemporaryDir temp;
+        const auto gameDirectory = temp.filePath("Stardew Valley");
+#ifdef Q_OS_MACOS
+        const auto executableDirectory = QDir(gameDirectory).filePath("Contents/MacOS");
+#else
+        const auto executableDirectory = gameDirectory;
+#endif
+        QVERIFY(SmapiTestFixtures::createSmapiFixture(executableDirectory, {4, 5, 2}, {4, 5, 2},
+                                                      "{ /* SMAPI metadata */ \"Mods\": {} }"));
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        QVERIFY(config.saveGameDirectory(gameDirectory));
+        LauncherWindow window(config.filePath());
+        auto* button = window.findChild<QPushButton*>("smapi");
+        QVERIFY(button);
+        button->click();
+        auto* smapiWindow = window.findChild<SmapiWindow*>();
+        QVERIFY(smapiWindow);
+        auto* status = smapiWindow->findChild<QLabel*>("stateLabel");
+        QVERIFY(status);
+        QCOMPARE(status->text(), QString("SMAPI installed\nVersion 4.5.2"));
+
+        QVERIFY(QFile::remove(QDir(executableDirectory).filePath("StardewModdingAPI.dll")));
+        smapiWindow->close();
+        button->click();
+        QVERIFY(status->text().contains("incomplete"));
+        QVERIFY(status->text().contains("StardewModdingAPI.dll"));
+
+        QVERIFY(SmapiTestFixtures::writeEmptyFile(
+            QDir(executableDirectory).filePath("StardewModdingAPI.dll")));
+        smapiWindow->close();
+        button->click();
+        QCOMPARE(status->text(), QString("SMAPI installed\nVersion 4.5.2"));
     }
 
     void missingExecutable() {
