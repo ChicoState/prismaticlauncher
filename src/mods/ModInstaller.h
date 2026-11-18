@@ -20,10 +20,14 @@ class ModInstaller {
    public:
     // Resolves a configured macOS bundle root to Contents/MacOS when present.
     [[nodiscard]] static QString modsDirectory(const QString& gameDirectory);
-    // Reads manifests from disk without following links. Errors prevent installation.
-    [[nodiscard]] static ModInstallResult installed(const QString& gameDirectory);
-    // Copies sources; never executes them or overwrites existing mods. All sources
-    // are validated and staged before publishing; failures roll back new folders.
+    /// @brief Reads installed manifests from the explicit mods folder, or the game's Mods folder.
+    /// The actual game directory is validated in both cases; links are rejected at the destination.
+    [[nodiscard]] static ModInstallResult installed(const QString& gameDirectory,
+                                                    const QString& explicitModsDirectory = {});
+    /// @brief Validates and stages sources before publishing to the explicit or shared mods folder.
+    /// Never executes sources or replaces existing mods; failures roll back newly published
+    /// folders.
     [[nodiscard]] static ModInstallResult install(const QStringList& sources,
-                                                  const QString& gameDirectory);
+                                                  const QString& gameDirectory,
+                                                  const QString& explicitModsDirectory = {});
 };

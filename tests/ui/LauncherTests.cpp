@@ -1,6 +1,7 @@
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -438,13 +439,16 @@ class LauncherTests : public QObject {
                  QDir::homePath() + "/.local/share/Steam/steamapps/common/Stardew Valley");
     }
 
-    void createSessionInstance() {
+    /// @brief Creating an instance saves its folder and opens the selected detail window.
+    void createSavedInstance() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
         QTimer::singleShot(0, &window, [] {
             if (auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget())) {
                 dialog->findChild<QLineEdit*>()->setText("Test farm");
-                dialog->accept();
+                dialog->findChild<QDialogButtonBox*>("buttons")
+                    ->button(QDialogButtonBox::Ok)
+                    ->click();
             }
         });
         auto* addButton = window.findChild<QPushButton*>("addInstance");

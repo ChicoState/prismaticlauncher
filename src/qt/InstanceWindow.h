@@ -29,13 +29,19 @@ class InstanceWindow : public QMainWindow {
     /// @brief Updates the instance title, launch mode, and shared game path without emitting a mode
     /// change.
     void setInstance(const QString& name, bool modded);
+    /// @brief Selects the instance directory used for installing and launching its mods.
+    /// An invalid or empty directory blocks mod operations instead of using shared game mods.
+    void setInstanceDirectory(const QString& directory);
+    /// @brief Returns the name currently displayed by the detail window.
+    [[nodiscard]] QString instanceName() const;
     /// @brief Selects a valid instance page and lazily loads mods on their first selection.
     void selectTab(int tab);
     /// @brief Refreshes the shared game path and installed mods, and logs the saved directory in
     /// the embedded console.
     void refreshGameDirectory();
     /// @brief Selects Console, validates the executable and SMAPI, and starts asynchronous output
-    /// capture. The game process outlives this window; UTF-8 fragments retain decoder state until
+    /// capture, using the explicit instance Mods folder when selected. The game process outlives
+    /// this window; UTF-8 fragments retain decoder state until
     /// process exit.
     void launchGame();
 
@@ -55,6 +61,9 @@ class InstanceWindow : public QMainWindow {
     ModInstallPage* installedMods_;
     QTabWidget* modTabs_;
     bool modsLoaded_ = false;
+    QString instanceName_;
+    QString instanceDirectory_;
+    bool explicitInstanceDirectory_ = false;
     LauncherConfig* config_;
     std::unique_ptr<Ui::InstanceWindow> ui_;
     LogWindow* logWindow_;
