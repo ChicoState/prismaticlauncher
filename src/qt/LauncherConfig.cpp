@@ -37,11 +37,7 @@ bool LauncherConfig::farmPackEnabled() const {
 }
 
 bool LauncherConfig::saveFarmPackEnabled(bool enabled) {
-    if (!QDir().mkpath(QFileInfo(filePath_).absolutePath())) return false;
-    QSettings settings(filePath_, QSettings::IniFormat);
-    settings.setValue("appearance/farm-pack-enabled", enabled);
-    settings.sync();
-    return settings.status() == QSettings::NoError;
+    return saveChickPix(farmPackImage(), farmPackOpacityPercent(), enabled);
 }
 
 int LauncherConfig::farmPackOpacityPercent() const {
@@ -50,10 +46,35 @@ int LauncherConfig::farmPackOpacityPercent() const {
 }
 
 bool LauncherConfig::saveFarmPackOpacityPercent(int percent) {
-    if (percent < 0 || percent > 100) return false;
+    return saveChickPix(farmPackImage(), percent, farmPackEnabled());
+}
+
+QString LauncherConfig::farmPackImage() const {
+    QSettings settings(filePath_, QSettings::IniFormat);
+    return settings.value("appearance/farm-pack-image").toString();
+}
+
+bool LauncherConfig::saveChickPix(const QString& image, int opacityPercent, bool enabled) {
+    if (opacityPercent < 0 || opacityPercent > 100) return false;
     if (!QDir().mkpath(QFileInfo(filePath_).absolutePath())) return false;
     QSettings settings(filePath_, QSettings::IniFormat);
-    settings.setValue("appearance/farm-pack-opacity", percent);
+    const QStringList keys = {"appearance/farm-pack-image", "appearance/farm-pack-opacity",
+                              "appearance/farm-pack-enabled"};
+    QList<QVariant> previousValues;
+    for (const auto& key : keys) previousValues.append(settings.value(key));
+    settings.setValue("appearance/farm-pack-image", image);
+    settings.setValue("appearance/farm-pack-opacity", opacityPercent);
+    settings.setValue("appearance/farm-pack-enabled", enabled);
     settings.sync();
-    return settings.status() == QSettings::NoError;
+    if (settings.status() == QSettings::NoError) return true;
+    // Failed syncs can leave pending values visible through other QSettings instances.
+    for (qsizetype index = 0; index < keys.size(); ++index) {
+        if (previousValues.at(index).isValid()) {
+            settings.setValue(keys.at(index), previousValues.at(index));
+        } else {
+            settings.remove(keys.at(index));
+        }
+    }
+    settings.sync();
+    return false;
 }
