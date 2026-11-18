@@ -116,11 +116,14 @@ opacity from 0% to 100%. **Save** applies the changes to the library and remembe
 them for future launches; **Cancel** discards pending edits. The library's
 **ChickPix** button toggles artwork; opacity is configured only in settings.
 
-To add your own pictures, put PNG, JPG/JPEG, or WebP files in a `chickens` folder
-beside `launcher.ini` or beside the launcher executable, then select **Refresh**
-in the dialog. The dialog shows the exact folder locations; no manifest changes
-or rebuild are required. With a custom `--config` path, the first folder follows
-that settings file. Image availability depends on installed Qt image decoders.
+To add your own pictures, select **Add image...** in the dialog. The launcher
+copies the selected readable image into the `chickens` folder beside
+`launcher.ini`, then adds it to the catalog; no manifest changes or rebuild are
+required. You can also put images in a `chickens` folder beside `launcher.ini`
+or beside the launcher executable, then select **Refresh**. The dialog shows
+the exact folder locations. With a custom `--config` path, the first folder
+follows that settings file. Image availability depends on installed Qt image
+decoders.
 Unsupported, unreadable, oversized files and links outside these folders are
 ignored. Limits are 16 MiB per file, 8192 pixels per dimension, and 16 megapixels.
 If a selected picture disappears or becomes unreadable, ChickPix uses

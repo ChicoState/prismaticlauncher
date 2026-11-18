@@ -22,6 +22,7 @@
 
 #include "LauncherConfig.h"
 #include "LauncherWindow.h"
+#include "ChickPixImages.h"
 #include "settings.h"
 
 namespace {
@@ -257,6 +258,57 @@ class ChickPixTests : public QObject {
         QVERIFY(buttons);
         QVERIFY(buttons->button(QDialogButtonBox::Cancel));
         buttons->button(QDialogButtonBox::Cancel)->click();
+    }
+
+    /// @brief Places Add image above Refresh images and imports a selected image into the custom
+    /// catalog folder.
+    void addImageEntryImportsIntoCustomFolder() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto configFile = temporary.filePath("launcher.ini");
+        const auto source = temporary.filePath("source/holiday.png");
+        QVERIFY(writeChicken(source, QColor(221, 84, 132)));
+
+        LauncherConfig config(configFile);
+        settings settingsWindow(&config);
+        settingsWindow.show();
+        auto* dialog = openChickPix(settingsWindow);
+        QVERIFY(dialog);
+        auto* addImage = dialog->findChild<QPushButton*>("chickPixAddImage");
+        auto* refresh = dialog->findChild<QPushButton*>("chickPixRefresh");
+        QVERIFY(addImage && refresh);
+        QVERIFY(addImage->geometry().bottom() < refresh->geometry().top());
+
+        ChickPixImages images(configFile);
+        const auto imported = images.importImage(source);
+        QVERIFY(!imported.isEmpty());
+        QVERIFY(QFileInfo::exists(imported));
+        QVERIFY(images.catalog().contains(imported));
+    }
+
+    /// @brief Rejects corrupt sources and preserves existing files when importing a duplicate name.
+    void importingImageRejectsInvalidSourcesAndAvoidsOverwrite() {
+        QTemporaryDir temporary;
+        QVERIFY(temporary.isValid());
+        const auto configFile = temporary.filePath("launcher.ini");
+        const auto source = temporary.filePath("source/holiday.png");
+        const auto invalid = temporary.filePath("source/broken.png");
+        const auto existing = temporary.filePath("chickens/holiday.png");
+        QVERIFY(writeChicken(source, QColor(221, 84, 132)));
+        QVERIFY(writeChicken(existing, QColor(14, 55, 220)));
+        QVERIFY(QDir().mkpath(QFileInfo(invalid).absolutePath()));
+        QFile invalidFile(invalid);
+        QVERIFY(invalidFile.open(QIODevice::WriteOnly));
+        QVERIFY(invalidFile.write("not an image") > 0);
+        invalidFile.close();
+
+        ChickPixImages images(configFile);
+        QCOMPARE(images.importImage(invalid), QString());
+        const auto imported = images.importImage(source);
+        QVERIFY(!imported.isEmpty());
+        QVERIFY(imported != existing);
+        QCOMPARE(QImage(existing).pixelColor(0, 0), QColor(14, 55, 220));
+        QCOMPARE(QFileInfo(imported).fileName(), QString("holiday (2).png"));
     }
 
     /// @brief Lists bundled and valid custom artwork while rejecting unsafe files.

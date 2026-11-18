@@ -28,6 +28,8 @@ class ChickPixDialog : public QDialog {
    private:
     /// @brief Lists unique image filenames and resolves the pending choice to its retained entry.
     void refreshCatalog();
+    /// @brief Opens an image picker and adds the selected artwork to the custom catalog.
+    void addImage();
     /// @brief Decodes the pending image or Default fallback and refreshes its preview.
     void loadPreview();
     /// @brief Applies pending visibility and opacity to the cached preview.
