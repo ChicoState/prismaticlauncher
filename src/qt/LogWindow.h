@@ -1,16 +1,19 @@
 #pragma once
 
-#include <QDialog>
 #include <QString>
+#include <QTime>
+#include <QWidget>
 #include <deque>
+#include <optional>
+#include <vector>
 
 class QColor;
 class QLabel;
 class QLineEdit;
-class QPlainTextEdit;
+class QTableWidget;
 class QSlider;
 
-class LogWindow : public QDialog {
+class LogWindow : public QWidget {
     Q_OBJECT
 
    public:
@@ -33,6 +36,14 @@ class LogWindow : public QDialog {
         Severity severity;
         QString source;
         QString message;
+        QTime timestamp = QTime::currentTime();
+        quint64 sequence = 0;
+    };
+    struct ViewportState {
+        std::optional<quint64> topSequence;
+        int topOffset = 0;
+        int scrollPosition = 0;
+        bool atBottom = true;
     };
     static constexpr int maximumEntries = 5000;
     static constexpr int maximumLineLength = 16384;
@@ -47,22 +58,34 @@ class LogWindow : public QDialog {
     static QString displayText(const Entry& entry);
     /// @brief Parses a completed stream line, inheriting metadata for continuations.
     void consumeLine(const QString& line, bool parsePrefix);
+    /// @brief Captures the top visible entry and its pixel offset, or the end-following state.
+    ViewportState captureViewport() const;
+    /// @brief Restores the same visible entry after row changes, following the end only if
+    /// captured.
+    void restoreViewport(const ViewportState& state);
     /// @brief Retains one bounded entry and incrementally updates the console.
     void appendEntry(Entry entry);
     /// @brief Returns true for entries satisfying both filters, or false otherwise.
     bool matchesFilters(const Entry& entry) const;
-    /// @brief Adds a colored plain-text line without moving the user's text cursor.
+    /// @brief Inserts a colored row in the active sort order without changing selection.
     void appendVisibleEntry(const Entry& entry);
-    /// @brief Removes the oldest visible line when its retained entry expires.
-    void removeFirstVisibleEntry();
-    /// @brief Rebuilds the view from retained history after a filter changes.
+    /// @brief Removes the row for an expired retained entry, if it is visible.
+    void removeVisibleEntry(quint64 sequence);
+    /// @brief Returns true when left precedes right under the active sort and arrival tie break.
+    bool entryPrecedes(const Entry& left, const Entry& right) const;
+    /// @brief Cycles a header sort and rebuilds retained rows in the selected order.
+    void sortByColumn(int column);
+    /// @brief Copies selected visible cells as tab-separated rows to the clipboard.
+    void copySelection() const;
+    /// @brief Rebuilds filtered and sorted history, preserving visible selection and viewport
+    /// identity.
     void rebuildVisibleEntries();
     /// @brief Clears history, unfinished output, and inherited stream metadata.
     void clearHistory();
     /// @brief Updates the visible and accessible severity threshold descriptions.
     void updateThresholdLabel();
 
-    QPlainTextEdit* m_logs;
+    QTableWidget* m_logs;
     QSlider* m_severitySlider;
     QLabel* m_thresholdLabel;
     QLineEdit* m_logFilter;
@@ -70,7 +93,11 @@ class LogWindow : public QDialog {
     QString m_pendingOutput;
     QString m_lastSource = QStringLiteral("Game");
     Severity m_lastSeverity = Severity::Info;
-    int m_visibleEntries = 0;
+    std::vector<Entry> m_visibleEntries;
+    quint64 m_nextSequence = 0;
+    int m_sortColumn = 0;
+    Qt::SortOrder m_sortOrder = Qt::AscendingOrder;
+    int m_lastClickedColumn = -1;
     bool m_skipLineFeed = false;
     bool m_fragmentedLine = false;
 };

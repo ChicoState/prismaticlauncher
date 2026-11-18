@@ -155,7 +155,7 @@ class ModInstallTests : public QObject {
         QVERIFY(page->findChild<QLabel*>("modInstallDestination")->text().contains(secondGame));
     }
 
-    /// @brief Installs into the shared game and records the result in the separate log window.
+    /// @brief Installs into the shared game and records the result in the embedded console.
     void instanceWindowUsesSharedGameAndLogsInstallation() {
         QTemporaryDir temp;
         LauncherConfig config(temp.filePath("launcher.ini"));
@@ -175,9 +175,16 @@ class ModInstallTests : public QObject {
         QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
         auto* console = window.findChild<LogWindow*>();
         QVERIFY(console);
-        auto* logs = console->findChild<QPlainTextEdit*>("logs");
+        auto* logs = console->findChild<QTableWidget*>("logs");
         QVERIFY(logs);
-        QVERIFY(logs->toPlainText().contains("Installed 1 mod"));
+        bool installationLogged = false;
+        for (int row = 0; row < logs->rowCount(); ++row) {
+            if (logs->item(row, 3)->text().contains("Installed 1 mod")) {
+                installationLogged = true;
+                break;
+            }
+        }
+        QVERIFY(installationLogged);
         window.setInstance("Another library entry", true);
         page->refresh();
         QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);

@@ -103,10 +103,6 @@ QPushButton#farmPackToggle:checked {
     border-radius: 4px;
 }
 
-QSlider#farmPackOpacity {
-    min-height: 18px;
-}
-
 QPushButton:hover {
     border: 1px solid #a9a9a9;
     border-radius: 4px;

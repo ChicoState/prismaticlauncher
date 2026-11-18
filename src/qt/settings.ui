@@ -103,6 +103,16 @@
       </widget>
      </item>
      <item>
+      <widget class="QPushButton" name="configureChickPix">
+       <property name="styleSheet">
+        <string notr="true">background-color: rgba(255, 255, 255, 0.4);</string>
+       </property>
+       <property name="text">
+        <string>Configure ChickPix</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QLabel" name="pathStatus">
        <property name="accessibleName">
         <string>Game path save status</string>
@@ -127,6 +137,7 @@
   <tabstop>browseDirectory</tabstop>
   <tabstop>detectDirectory</tabstop>
   <tabstop>savePath</tabstop>
+  <tabstop>configureChickPix</tabstop>
  </tabstops>
  <resources/>
  <connections/>

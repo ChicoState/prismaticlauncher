@@ -1,10 +1,10 @@
 #pragma once
 
 #include <QMainWindow>
+#include <QPixmap>
 #include <QPointer>
 #include <memory>
 
-#include "FarmPack.h"
 #include "LauncherConfig.h"
 
 namespace Ui {
@@ -16,31 +16,39 @@ class settings;
 class SmapiWindow;
 class QGraphicsOpacityEffect;
 class QLabel;
-class QResizeEvent;
+class QEvent;
 
 class LauncherWindow : public QMainWindow {
     Q_OBJECT
 
    public:
+    /// @brief Builds the launcher and applies saved ChickPix artwork and quick-control values.
     explicit LauncherWindow(const QString& configFile, QWidget* parent = nullptr);
     ~LauncherWindow() override;
 
    private:
+    /// @brief Connects launcher actions and persists quick ChickPix changes with visible failures.
     void connectSignals();
     void populateInstances();
     void addInstance();
     void openInstanceWindow(int tab = 0);
+    /// @brief Shows launcher settings and applies successful ChickPix saves to the library.
     void openSettingsWindow();
     /// @brief Opens the SMAPI settings window for the configured game directory.
     void openSmapiWindow();
     /// @brief Opens the selected instance and launches it with live console capture.
     void launchGame();
     void filterInstances(const QString& query);
+    /// @brief Loads the saved image or Default fallback and synchronizes the ChickPix toggle.
+    void reloadChickPix();
+    /// @brief Resizes and positions the cached ChickPix image without reading image files.
     void refreshFarmPackOverlay();
-    void resizeEvent(QResizeEvent* event) override;
+    /// @brief Refreshes ChickPix when the library page receives its final size or becomes visible.
+    /// @return True if the base filter consumes the event, or false to continue normal dispatch.
+    bool eventFilter(QObject* watched, QEvent* event) override;
 
     LauncherConfig config_;
-    FarmPack farmPack_;
+    QPixmap farmPackImage_;
     bool farmPackLoaded_ = false;
     bool farmPackEnabled_ = false;
     QLabel* farmPackOverlay_ = nullptr;
