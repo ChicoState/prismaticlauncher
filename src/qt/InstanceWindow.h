@@ -20,6 +20,7 @@ class InstanceWindow : public QMainWindow {
     Q_OBJECT
 
    public:
+    /// @brief Builds the instance window with aligned header and content columns and mod views.
     explicit InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
                             QWidget* parent = nullptr);
     ~InstanceWindow() override;

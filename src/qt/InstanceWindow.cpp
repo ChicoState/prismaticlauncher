@@ -35,7 +35,7 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     ui_->modsLayout->addWidget(modTabs_);
     // Keep the sidebar compact so both mod panes fit at the minimum window size.
     ui_->navigation->setFixedWidth(120);
-    ui_->bodyLayout->setStretch(1, 1);
+    ui_->rootLayout->setColumnStretch(1, 1);
     connectSignals();
     setInstance(name, modded);
 }

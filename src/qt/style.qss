@@ -35,12 +35,7 @@ QLabel#heading {
     font-weight: 700;
 }
 
-QLabel#detailTitle {
-    color: #30363b;
-    font-size: 20px;
-    font-weight: 600;
-}
-
+QLabel#detailTitle,
 QLabel#sectionTitle,
 QLabel#modsTitle,
 QLabel#logsTitle,
@@ -293,14 +288,14 @@ QLabel#modMetadata { color: #626c73; font-size: 12px; }
 QLabel#modSummary { color: #41474b; font-size: 14px; }
 QLabel#modDescription { color: #555c61; font-size: 13px; }
 QLabel#modListStatus, QLabel#modDetailStatus { color: #626c73; font-size: 12px; }
-QPushButton#modRefresh, QPushButton#backFromNexus {
+QPushButton#modRefresh, QPushButton#backFromNexus, QPushButton#backToLibrary {
     padding: 8px 12px;
     border: 1px solid transparent;
     border-radius: 4px;
 }
-QPushButton#modRefresh:hover, QPushButton#backFromNexus:hover { border-color: #aab3b8; }
-QPushButton#modRefresh:focus, QPushButton#backFromNexus:focus { border-color: #805900; }
-QPushButton#modDownload {
+QPushButton#modRefresh:hover, QPushButton#backFromNexus:hover, QPushButton#backToLibrary:hover { border-color: #aab3b8; }
+QPushButton#modRefresh:focus, QPushButton#backFromNexus:focus, QPushButton#backToLibrary:focus { border-color: #805900; }
+QPushButton#modDownload, QPushButton#playDetailInstance {
     background: #4b9dcc;
     color: #182f3d;
     border: 1px solid #4b9dcc;
@@ -308,10 +303,10 @@ QPushButton#modDownload {
     padding: 10px 12px;
     font-weight: 600;
 }
-QPushButton#modDownload:hover { background: #63add6; border-color: #3d8ebd; }
-QPushButton#modDownload:pressed { background: #ffb703; border-color: #ffb703; }
-QPushButton#modDownload:focus { border-color: #24343d; }
-QPushButton#modDownload:disabled { background: #e8eaeb; color: #747b80; border-color: #d7dbdd; }
+QPushButton#modDownload:hover, QPushButton#playDetailInstance:hover { background: #63add6; border-color: #3d8ebd; }
+QPushButton#modDownload:pressed, QPushButton#playDetailInstance:pressed { background: #ffb703; border-color: #ffb703; }
+QPushButton#modDownload:focus, QPushButton#playDetailInstance:focus { border-color: #24343d; }
+QPushButton#modDownload:disabled, QPushButton#playDetailInstance:disabled { background: #e8eaeb; color: #747b80; border-color: #d7dbdd; }
 QSplitter#modSplitter::handle { background: #f1f2f3; }
 QSplitter#modSplitter::handle:hover { background: #d8dcde; }
 
