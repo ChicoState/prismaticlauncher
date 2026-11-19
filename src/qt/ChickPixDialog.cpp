@@ -3,10 +3,12 @@
 #include <QCheckBox>
 #include <QComboBox>
 #include <QDialogButtonBox>
+#include <QFileDialog>
 #include <QFileInfo>
 #include <QFormLayout>
 #include <QGraphicsOpacityEffect>
 #include <QHBoxLayout>
+#include <QImageReader>
 #include <QLabel>
 #include <QPushButton>
 #include <QSignalBlocker>
@@ -63,6 +65,9 @@ ChickPixDialog::ChickPixDialog(LauncherConfig* config, QWidget* parent)
     folders->setWordWrap(true);
     folders->setTextInteractionFlags(Qt::TextSelectableByMouse);
     layout->addWidget(folders);
+    auto* addImage = new QPushButton("Add image...", this);
+    addImage->setObjectName("chickPixAddImage");
+    layout->addWidget(addImage);
     auto* refresh = new QPushButton("Refresh images", this);
     refresh->setObjectName("chickPixRefresh");
     layout->addWidget(refresh);
@@ -80,6 +85,7 @@ ChickPixDialog::ChickPixDialog(LauncherConfig* config, QWidget* parent)
     connect(image_, &QComboBox::currentIndexChanged, this, &ChickPixDialog::loadPreview);
     connect(opacity_, &QSlider::valueChanged, this, &ChickPixDialog::updatePreview);
     connect(enabled_, &QCheckBox::toggled, this, &ChickPixDialog::updatePreview);
+    connect(addImage, &QPushButton::clicked, this, &ChickPixDialog::addImage);
     connect(refresh, &QPushButton::clicked, this, &ChickPixDialog::refreshCatalog);
     connect(saveButton, &QPushButton::clicked, this, &ChickPixDialog::save);
     connect(buttons, &QDialogButtonBox::rejected, this, &QDialog::reject);
@@ -111,6 +117,27 @@ void ChickPixDialog::refreshCatalog() {
     }
     image_->setCurrentIndex(image_->findData(selection));
     loadPreview();
+}
+
+void ChickPixDialog::addImage() {
+    QStringList imagePatterns;
+    for (const auto& format : QImageReader::supportedImageFormats()) {
+        imagePatterns.append("*." + QString::fromLatin1(format));
+    }
+    const auto source = QFileDialog::getOpenFileName(
+        this, "Add ChickPix image", QString(), "Images (" + imagePatterns.join(' ') + ")");
+    if (source.isEmpty()) return;
+
+    const auto imported = images_.importImage(source);
+    if (imported.isEmpty()) {
+        status_->setText(
+            "Could not add that image. Choose a readable image within the size limit.");
+        return;
+    }
+    refreshCatalog();
+    const auto importedIndex = image_->findData(imported);
+    if (importedIndex >= 0) image_->setCurrentIndex(importedIndex);
+    status_->setText("Added image. Select Save to apply it to the library.");
 }
 
 void ChickPixDialog::loadPreview() {

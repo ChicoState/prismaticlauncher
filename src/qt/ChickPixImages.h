@@ -17,6 +17,10 @@ class ChickPixImages {
                                            const QStringList& catalog) const;
     /// @brief Decodes an allowed image; returns a null image for invalid or unavailable selections.
     [[nodiscard]] QImage load(const QString& selection) const;
+    /// @brief Copies a readable image into the settings-side custom folder without overwriting
+    /// existing artwork.
+    /// @return The imported absolute path, or an empty string when validation or copying fails.
+    [[nodiscard]] QString importImage(const QString& source) const;
     /// @brief Returns the bundled Default artwork identifier used for new or unavailable
     /// selections.
     [[nodiscard]] static QString defaultImage();

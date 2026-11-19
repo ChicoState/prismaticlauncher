@@ -3,6 +3,7 @@
 #include <QCoreApplication>
 #include <QCryptographicHash>
 #include <QDir>
+#include <QFile>
 #include <QFileInfo>
 #include <QHash>
 #include <QImageReader>
@@ -16,6 +17,24 @@ constexpr int maximumDimension = 8192;
 constexpr qint64 maximumPixels = 16LL * 1024 * 1024;
 const QStringList bundledImages = {":/farmpack/default.png", ":/farmpack/spring.png",
                                    ":/farmpack/summer.png"};
+
+/// @brief Reads an image while enforcing the custom artwork size limits.
+QImage readValidatedImage(const QString& path) {
+    const QFileInfo file(path);
+    if (!file.isFile() || !file.isReadable() || file.size() <= 0 ||
+        file.size() > maximumFileBytes) {
+        return {};
+    }
+    QImageReader reader(path);
+    if (!reader.canRead()) return {};
+    const auto size = reader.size();
+    const qint64 pixels = static_cast<qint64>(size.width()) * size.height();
+    if (!size.isValid() || size.width() > maximumDimension || size.height() > maximumDimension ||
+        pixels > maximumPixels) {
+        return {};
+    }
+    return reader.read();
+}
 
 /// @brief Identifies decoded pixels and dimensions independently of filenames and encoded metadata.
 QByteArray imageFingerprint(const QImage& image) {
@@ -62,20 +81,38 @@ QString ChickPixImages::allowedPath(const QString& selection) const {
 QImage ChickPixImages::load(const QString& selection) const {
     const auto path = allowedPath(selection);
     if (path.isEmpty()) return {};
-    const QFileInfo file(path);
-    const auto extension = QFileInfo(selection).suffix().toLower();
-    if (!QStringList{"png", "jpg", "jpeg", "webp"}.contains(extension)) return {};
-    if (file.size() <= 0 || file.size() > maximumFileBytes) return {};
-    QImageReader reader(path);
-    const auto size = reader.size();
-    const qint64 pixels = static_cast<qint64>(size.width()) * size.height();
-    if (!size.isValid() || size.width() > maximumDimension || size.height() > maximumDimension ||
-        pixels > maximumPixels) {
+    return readValidatedImage(path);
+}
+
+QString ChickPixImages::importImage(const QString& source) const {
+    const auto sourcePath = QFileInfo(source).absoluteFilePath();
+    if (readValidatedImage(sourcePath).isNull() || folders_.isEmpty()) return {};
+
+    const auto destinationFolder = QDir::cleanPath(folders_.first());
+    if (!QDir().mkpath(destinationFolder)) return {};
+    const QFileInfo sourceInfo(sourcePath);
+    const auto sourceCanonicalPath = sourceInfo.canonicalFilePath();
+    const auto destinationCanonicalFolder = QFileInfo(destinationFolder).canonicalFilePath();
+    if (!sourceCanonicalPath.isEmpty() && !destinationCanonicalFolder.isEmpty() &&
+        QFileInfo(sourceCanonicalPath).path() == destinationCanonicalFolder) {
+        return sourceInfo.absoluteFilePath();
+    }
+
+    const auto baseName = sourceInfo.completeBaseName();
+    const auto suffix = sourceInfo.completeSuffix();
+    if (baseName.isEmpty() || suffix.isEmpty()) return {};
+    QString destination = QDir(destinationFolder).filePath(sourceInfo.fileName());
+    int copyNumber = 2;
+    while (QFileInfo::exists(destination)) {
+        destination = QDir(destinationFolder).filePath(
+            baseName + " (" + QString::number(copyNumber++) + ")." + suffix);
+    }
+    if (!QFile::copy(sourcePath, destination)) return {};
+    if (readValidatedImage(destination).isNull()) {
+        QFile::remove(destination);
         return {};
     }
-    if (!reader.canRead()) return {};
-    if (!QList<QByteArray>{"png", "jpeg", "webp"}.contains(reader.format().toLower())) return {};
-    return reader.read();
+    return QFileInfo(destination).absoluteFilePath();
 }
 
 QStringList ChickPixImages::catalog() const {
