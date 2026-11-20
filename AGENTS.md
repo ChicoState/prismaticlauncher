@@ -15,7 +15,7 @@ Prismatic Launcher is a C++20/Qt 6 desktop project with application sources, tes
 - `README.md`, `documents/infrastructure_plan.md` — developer documentation and approved infrastructure plan.
 - `.agents/skills/` — local skill instructions.
 - `.agents/*.toml` — existing agent role definitions.
-- `.github/agents/*.agent.md` — generated VS Code agent roles; regenerate with `python3 scripts/sync-vscode-agents.py` (Python 3.11+), verify with `--check`. Role sources are `.agents/*.toml` and `.codex/agents/*.toml`. The command also validates canonical skills in `.agents/skills/`; do not create duplicate skill entries under `.github/skills/`.
+- `.github/agents/*.agent.md`, `.claude/agents/*.md` — generated VS Code agent roles and Claude Code subagents; regenerate both with `python3 scripts/sync-vscode-agents.py` (Python 3.11+), verify with `--check`, and do not hand-edit them. Role sources are `.agents/*.toml` and `.codex/agents/*.toml`; Claude exports omit the Codex `model` and rewrite Codex session wording through the script's replacement table. The command also validates canonical skills in `.agents/skills/`; do not create duplicate skill entries under `.github/skills/`.
 - `.codex/agents/*.toml`, `.codex/config.toml` — native Codex feature workers and project delegation settings.
 - `documents/templates/feature-request.md` — reusable feature request template.
 - `src/qt/`, `src/smapi/` — native Qt application and SMAPI services.
