@@ -20,7 +20,7 @@ class InstanceWindow : public QMainWindow {
     Q_OBJECT
 
    public:
-    /// @brief Creates instance pages and an embedded console using a borrowed shared configuration.
+    /// @brief Builds the instance window with aligned header and content columns and mod views.
     explicit InstanceWindow(const QString& name, bool modded, LauncherConfig* config,
                             QWidget* parent = nullptr);
     /// @brief Destroys the instance UI while independently owned game processes keep running.

@@ -92,7 +92,7 @@ class LauncherTests : public QObject {
         qApp->setStyleSheet(style.readAll());
     }
 
-    /// @brief The instance Console tab contains the live console without a standalone log window.
+    /// @brief The instance Logs tab contains the live console without a standalone log window.
     void consoleIsEmbeddedInInstanceTab() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
@@ -102,9 +102,9 @@ class LauncherTests : public QObject {
         QVERIFY(instance);
         auto* navigation = instance->findChild<QListWidget*>("navigation");
         QVERIFY(navigation);
-        const auto consoleItems = navigation->findItems("Console", Qt::MatchExactly);
-        QCOMPARE(consoleItems.size(), 1);
-        navigation->setCurrentItem(consoleItems.first());
+        const auto logsItems = navigation->findItems("Logs", Qt::MatchExactly);
+        QCOMPARE(logsItems.size(), 1);
+        navigation->setCurrentItem(logsItems.first());
         auto* console = instance->findChild<LogWindow*>();
         QVERIFY(console);
         QVERIFY2(!console->isWindow(), "Console must be embedded rather than a standalone window.");
@@ -118,7 +118,7 @@ class LauncherTests : public QObject {
         QVERIFY(!instance->findChild<QPushButton*>("openLogs"));
         console->appendMessage("retained across navigation");
         navigation->setCurrentRow(0);
-        navigation->setCurrentItem(consoleItems.first());
+        navigation->setCurrentItem(logsItems.first());
         QCOMPARE(console->findChild<QTableWidget*>("logs")->rowCount(), 1);
     }
 

@@ -44,7 +44,7 @@ ModInstallPage::ModInstallPage(LauncherConfig* config, QWidget* parent)
     setObjectName("modInstallPage");
     setAcceptDrops(true);
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setContentsMargins(16, 0, 16, 16);
     layout->setSpacing(12);
     auto* heading = new QHBoxLayout;
     heading->addWidget(plainLabel("Installed mods", "modsTitle", this), 1);
