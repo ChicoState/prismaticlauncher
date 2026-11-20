@@ -19,7 +19,7 @@
 - **Backend required:** No; any future requests to public mod sources are direct client requests and are outside persistent application infrastructure.
 - **Cross-device persistence:** Not provided; data stays on the user's computer.
 - **Interaction between accounts:** None.
-- **Primary application components:** Qt desktop UI; local game-discovery and filesystem service; mod installation/profile service; SQLite persistence layer; direct public-download client where implemented.
+- **Primary application components:** Qt desktop UI; local game-discovery and filesystem service; mod installation/profile service; directory-based instance persistence; direct public-download client where implemented.
 
 ## 3. Selected Technology Stack
 
@@ -35,21 +35,21 @@
 ## 4. Storage and Persistence
 
 - **Storage model:** Local.
-- **Primary data store:** SQLite for application settings, game locations, mod records, and named profiles.
-- **User files or object storage:** Local filesystem for mod archives, installed mod files, logs, and user-selected paths; no object storage service.
-- **Local-development storage:** Temporary or developer-local SQLite databases and fixture directories, never a shared database service.
-- **Production hosting model:** No production data hosting; each installation owns its database and files.
-- **Schema and migration approach:** Versioned, transactional SQLite migrations run by the app before opening a newer schema.
-- **Backup, export, or recovery approach:** Provide a future profile/settings export and document the application-data location; do not modify the game installation until validation succeeds.
+- **Primary data store:** User-named instance directories containing versioned `instance.json` metadata and a separate `Mods/` directory. Launcher-wide settings and the shared game location remain in the existing INI configuration. SQLite is not required.
+- **User files or object storage:** Local filesystem for instance mods, archives, logs, and user-selected paths; no object storage service.
+- **Local-development storage:** Temporary instance roots and fixture game/mod directories, never a shared service or real game data.
+- **Production hosting model:** No production data hosting; each installation owns its directories and files.
+- **Schema and migration approach:** Versioned JSON metadata; reject unsupported versions without overwriting them. Publish newly created instances from same-filesystem staging directories and save metadata atomically with Qt `QSaveFile`.
+- **Backup, export, or recovery approach:** Instance directories are accessible for manual backup while the app and game are closed. Future export can package those directories; retain unreadable metadata for recovery.
 - **Secrets and connection-string approach:** No database credentials. Any future public-download API token must be user-supplied or an approved build secret, never embedded in the application.
-- **Reason this storage fits the access pattern:** SQLite provides robust structured local state while the filesystem remains the source for game and mod files.
+- **Reason this storage fits the access pattern:** Players can inspect and back up named instance folders directly, with each mod set stored alongside its metadata. Reject invalid or colliding folder names rather than silently rewriting them.
 
 ## 5. Testing Tools
 
 | Test layer | Tool or library | Planned scope | Planned execution point |
 |---|---|---|---|
-| Unit | Qt Test | Domain logic, profile rules, SQLite repositories, and path validation | Local and pull requests |
-| Integration | Qt Test with temporary SQLite databases and fixture game/mod directories | Filesystem, migration, and installation workflows without touching a real game install | Local and pull requests |
+| Unit | Qt Test | Domain logic, profile rules, instance directory stores, and path validation | Local and pull requests |
+| Integration | Qt Test with temporary instance roots and fixture game/mod directories | Filesystem, migration, and installation workflows without touching a real game install | Local and pull requests |
 | End-to-end or UI | Qt Test widget/UI tests | Critical workflows such as selecting a game location, creating a profile, and installing a fixture mod | Pull requests where reliable; release validation |
 | Test orchestration | CTest | Discover, filter, and report all test executables | Local, Docker Linux validation, and pull requests |
 
@@ -102,7 +102,7 @@ These are developer-workstation prerequisites that will not be supplied by the p
 - **Ports:** None.
 - **Bind mounts and named volumes:** Bind-mount the source read/write only when a developer intentionally uses the validation container; use a cache volume for vcpkg only if it is safe to invalidate.
 - **Environment-variable and secret handling:** No secrets in the image or Docker build context; pass only non-sensitive build settings at run time.
-- **Local database or service containers:** None; integration tests create temporary SQLite databases.
+- **Local database or service containers:** None; integration tests create temporary instance directories.
 - **Production image or non-container release path:** Native platform packages are built on native GitHub runners and attached to GitHub Releases; no production container is released.
 - **Build stages and hardening:** Use a minimal pinned builder image, a non-root user, `.dockerignore`, and no embedded credentials; production-image health checks do not apply.
 - **Planned future development command:** `docker build -f Dockerfile.ci -t prismaticlauncher-ci .` (future only; not executed by this planning process).
@@ -142,7 +142,7 @@ These are developer-workstation prerequisites that will not be supplied by the p
   4. Download each uploaded asset for a basic install/package smoke check before marking the release ready.
 - **Build artifacts:** Windows ZIP archive, macOS signed/notarized app ZIP archive, Linux `tar.gz` archive, and SHA-256 checksums.
 - **Signing, notarization, or store requirements:** Windows code-signing certificate where distributed installer policy requires it; Apple Developer certificate, signing identity, notarization credentials, and Apple Developer account for macOS distribution; no app-store accounts selected.
-- **Database migration step:** No hosted migration. The released app performs its own local transactional SQLite migration at startup.
+- **Metadata compatibility step:** No hosted migration. The app validates local instance metadata versions and preserves unsupported or unreadable records.
 - **Environment approval:** A protected GitHub `release` environment with maintainer approval before publishing signed assets.
 - **Post-deployment verification:** Validate release assets and checksums; manually smoke-test the signed package on each target OS before broad announcement.
 - **Failed-release or rollback approach:** Mark the GitHub Release as draft or pre-release, remove defective assets, publish a corrected version tag/release, and document affected versions in release notes; do not overwrite released artifacts.

@@ -3,6 +3,7 @@ qt_add_library(launcher-ui STATIC
     ChickPixImages.cpp ChickPixImages.h
     GameDirectoryDetector.cpp GameDirectoryDetector.h
     LauncherConfig.cpp LauncherConfig.h
+    InstanceStore.cpp InstanceStore.h
     LogWindow.cpp LogWindow.h
     InstanceWindow.cpp InstanceWindow.h InstanceWindow.ui
     LauncherWindow.cpp LauncherWindow.h LauncherWindow.ui
@@ -31,6 +32,11 @@ set_target_properties(prismatic-launch PROPERTIES
 )
 
 if(BUILD_TESTING)
+    qt_add_executable(instance-persistence-tests ../../tests/ui/InstancePersistenceTests.cpp)
+    target_link_libraries(instance-persistence-tests PRIVATE launcher-ui Qt6::Test)
+    add_test(NAME instance-persistence-tests COMMAND instance-persistence-tests)
+    set_tests_properties(instance-persistence-tests PROPERTIES ENVIRONMENT "QT_QPA_PLATFORM=offscreen")
+
     qt_add_executable(chickpix-tests ../../tests/ui/ChickPixTests.cpp)
     target_link_libraries(chickpix-tests PRIVATE launcher-ui Qt6::Test)
     add_test(NAME chickpix-tests COMMAND chickpix-tests)

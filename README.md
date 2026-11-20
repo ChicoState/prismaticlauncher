@@ -1,6 +1,6 @@
 # Prismatic Launcher
 
-Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its Qt Widgets UI provides an instance library with Add/Play/Edit and a separate window with Mods, Logs, Settings, and Modpacks. Mods supports local drag-and-drop installation into one shared game directory and browsing Nexus Mods. Automatic game discovery, SQLite data access, and release packaging are not connected yet.
+Prismatic Launcher is a C++20/Qt 6 desktop launcher for Stardew Valley. Its Qt Widgets UI provides an instance library with Add/Play/Edit and a separate window with Mods, Logs, Settings, and Modpacks. Mods supports local drag-and-drop installation into separate instance folders and browsing Nexus Mods. Instance names and launch modes persist in local JSON files. Release packaging is not connected yet.
 
 ## Repository map
 
@@ -75,7 +75,7 @@ the current page. **Refresh** returns to the first page;
 and the page reports loading, empty results, and errors. The key is kept in memory
 only; after changing it, restart the launcher. This view does not install mods.
 
-The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the planned app is self-contained and will use local SQLite. Do not add secrets, certificates, or game data to the repository.
+The CTest suite is network-free and validates list/detail response parsing and list filtering. No `.env` file or local service is needed: the app is self-contained and uses local instance directories and JSON metadata. Do not add secrets, certificates, or game data to the repository.
 For an SDK installed outside system paths, pass `-DCMAKE_PREFIX_PATH=/path/to/Qt/6.8.3/gcc_64` to the configure command (use your platform's actual SDK directory). To resolve Qt through the pinned vcpkg manifest instead, pass `-DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake"`. CMake links Qt Widgets and Qt Test using the [Qt CMake integration](https://doc.qt.io/qt-6/cmake-get-started.html).
 
 On Ubuntu install `qt6-base-dev`, `nlohmann-json3-dev`, and `libarchive-dev` alongside CMake 3.28+ and a C++ compiler. On macOS libarchive is also available through Homebrew (`brew install libarchive`; pass its prefix as `LibArchive_ROOT` if needed). The vcpkg manifest supplies libarchive on all platforms. With Make installed, Ninja is optional with this alternate build:
@@ -104,7 +104,7 @@ Edit Instance → Settings → Save game path writes a per-user INI override usi
 directory=/home/your-user/.local/share/Steam/steamapps/common/Stardew Valley
 ```
 
-Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI`. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Add Instance creates session-only UI entries. Modes and entries reset on restart; the game path persists. Mods provides Installed and Browse Nexus tabs; Modpacks remains a preview page. Logs shows launcher activity, including mod-install results, for the current session, with text search, rather than game output. SQLite remains the planned future structured persistence layer; this INI is only the bootstrap path configuration.
+Play validates and starts the selected game's executable from that folder. Vanilla uses `StardewValley` on Ubuntu; Modded uses an already-installed `StardewModdingAPI` with the selected instance's `Mods` directory. Edit Instance, double-clicking an instance, and Add Instance open a separate instance window; its Settings tab shares the configured game path. Instance entries and launch modes persist immediately in `<INI basename>.instances/<user-provided name>/instance.json`, beside the INI file. Each instance has its own `Mods/` directory for installed mods and their configuration. Names must be valid portable folder names and unique without regard to case or Unicode normalization; invalid names are rejected rather than changed. Existing game-folder mods and game saves are not moved or isolated. Mods provides Installed and Browse Nexus tabs; Modpacks remains a preview page. Console output and launcher activity remain session-only. See [instance storage](documents/instance-storage.md) for layout, recovery, and limitations.
 
 ### Configure ChickPix artwork
 

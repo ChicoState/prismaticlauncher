@@ -17,6 +17,7 @@
 #include "LauncherConfig.h"
 #include "LogWindow.h"
 #include "ModInstallPage.h"
+#include "ModInstaller.h"
 
 namespace {
 void writeFile(const QString& path, const QByteArray& bytes) {
@@ -127,6 +128,80 @@ class ModInstallTests : public QObject {
         QTRY_VERIFY_WITH_TIMEOUT(!page.isBusy(), 5000);
         QCOMPARE(page.findChild<QTableWidget*>("installedMods")->rowCount(), 1);
         QVERIFY(page.findChild<QLabel*>("modInstallDestination")->text().contains(game));
+    }
+
+    /// @brief Instance mods are installed in their named directory and remain isolated on
+    /// switching.
+    void instancesKeepSeparateModDirectories() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        const auto game = temp.filePath("Game");
+        writeFile(game + "/StardewValley.dll", "fixture");
+        QVERIFY(config.saveGameDirectory(game));
+        const auto first = temp.filePath("instances/My cozy farm");
+        const auto second = temp.filePath("instances/Other farm");
+        QVERIFY(QDir().mkpath(first + "/Mods"));
+        QVERIFY(QDir().mkpath(second + "/Mods"));
+        makeMod(temp.filePath("Cozy"));
+        InstanceWindow window("My cozy farm", true, &config);
+        window.setInstanceDirectory(first);
+        auto* page = window.findChild<ModInstallPage*>();
+        QVERIFY(page);
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        page->installSources({temp.filePath("Cozy")});
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        QVERIFY(QFileInfo::exists(first + "/Mods/Cozy/Cozy.dll"));
+        QVERIFY(!QFileInfo::exists(game + "/Mods/Cozy"));
+        window.setInstance("Other farm", true);
+        window.setInstanceDirectory(second);
+        page->refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        QCOMPARE(page->findChild<QTableWidget*>("installedMods")->rowCount(), 0);
+        window.setInstance("My cozy farm", true);
+        window.setInstanceDirectory(first);
+        page->refresh();
+        QTRY_VERIFY_WITH_TIMEOUT(!page->isBusy(), 5000);
+        QCOMPARE(page->findChild<QTableWidget*>("installedMods")->rowCount(), 1);
+        QCOMPARE(window.instanceName(), QString("My cozy farm"));
+    }
+
+    /// @brief An invalid explicit destination never falls back to shared mods after a pending read.
+    void emptyInstanceDestinationDoesNotShowSharedMods() {
+        QTemporaryDir temp;
+        LauncherConfig config(temp.filePath("launcher.ini"));
+        const auto game = temp.filePath("Game");
+        writeFile(game + "/StardewValley.dll", "fixture");
+        makeMod(game + "/Mods/Shared");
+        QVERIFY(config.saveGameDirectory(game));
+        ModInstallPage page(&config);
+        page.refresh();
+        page.setModsDirectory({});
+        QTRY_VERIFY_WITH_TIMEOUT(!page.isBusy(), 5000);
+        QCOMPARE(page.findChild<QTableWidget*>("installedMods")->rowCount(), 0);
+        QVERIFY(page.findChild<QLabel*>("modInstallStatus")->text().contains("Select an instance"));
+    }
+
+    /// @brief Explicit instance destinations still require a real game and reject linked paths.
+    void validatesInstanceDestinations() {
+        QTemporaryDir temp;
+        const auto game = temp.filePath("Game");
+        const auto instance = temp.filePath("instances/My farm");
+        const auto source = temp.filePath("Cozy");
+        QVERIFY(QDir().mkpath(instance + "/Mods"));
+        makeMod(source);
+        QVERIFY(!ModInstaller::install({source}, game, instance + "/Mods").succeeded());
+        writeFile(game + "/StardewValley.dll", "fixture");
+        QVERIFY(!ModInstaller::install({source}, game, "relative/Mods").succeeded());
+#ifdef Q_OS_UNIX
+        const auto linkedInstance = temp.filePath("Linked farm");
+        QVERIFY(QFile::link(instance, linkedInstance));
+        QVERIFY(!ModInstaller::install({source}, game, linkedInstance + "/Mods").succeeded());
+        const auto linkedMods = temp.filePath("linkedMods");
+        QVERIFY(QFile::link(instance + "/Mods", linkedMods));
+        QVERIFY(!ModInstaller::install({source}, game, linkedMods).succeeded());
+#endif
+        QVERIFY(!QFileInfo::exists(instance + "/Mods/Cozy"));
+        QVERIFY(!QFileInfo::exists(game + "/Mods"));
     }
 
     /// @brief Refreshing the shared path replaces the installed-mod list and destination.

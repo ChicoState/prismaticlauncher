@@ -5,6 +5,7 @@
 #include <QPointer>
 #include <memory>
 
+#include "InstanceStore.h"
 #include "LauncherConfig.h"
 
 namespace Ui {
@@ -22,15 +23,20 @@ class LauncherWindow : public QMainWindow {
     Q_OBJECT
 
    public:
-    /// @brief Builds the launcher and applies saved ChickPix artwork and quick-control values.
+    /// @brief Loads saved instances and applies saved ChickPix artwork and quick-control values.
     explicit LauncherWindow(const QString& configFile, QWidget* parent = nullptr);
     ~LauncherWindow() override;
 
    private:
     /// @brief Connects launcher actions and persists quick ChickPix changes with visible failures.
     void connectSignals();
+    /// @brief Loads saved instance cards and reports storage problems without replacing files.
     void populateInstances();
+    /// @brief Appends a card for a successfully saved instance and retains its directory identity.
+    void appendInstance(const InstanceRecord& record);
+    /// @brief Validates and saves a named instance before publishing its card and detail window.
     void addInstance();
+    /// @brief Opens the selected saved instance with its own mods directory.
     void openInstanceWindow(int tab = 0);
     /// @brief Shows launcher settings and applies successful ChickPix saves to the library.
     void openSettingsWindow();
@@ -48,6 +54,7 @@ class LauncherWindow : public QMainWindow {
     bool eventFilter(QObject* watched, QEvent* event) override;
 
     LauncherConfig config_;
+    InstanceStore instances_;
     QPixmap farmPackImage_;
     bool farmPackLoaded_ = false;
     bool farmPackEnabled_ = false;
