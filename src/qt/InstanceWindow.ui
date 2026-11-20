@@ -223,13 +223,6 @@ cal installation</string>
           </property>
          </widget>
         </item>
-        <item>
-         <widget class="QPushButton" name="openLogs">
-          <property name="text">
-           <string>Open log window</string>
-          </property>
-         </widget>
-        </item>
        </layout>
       </widget>
       <widget class="QWidget" name="settingsPage">
