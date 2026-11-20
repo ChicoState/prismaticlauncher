@@ -1,6 +1,7 @@
 #include "InstanceWindow.h"
 
 #include <QComboBox>
+#include <QDir>
 #include <QFileInfo>
 #include <QMessageBox>
 #include <QProcess>
@@ -36,7 +37,7 @@ InstanceWindow::InstanceWindow(const QString& name, bool modded, LauncherConfig*
     ui_->logsLayout->addWidget(logWindow_);
     // Keep the sidebar compact so both mod panes fit at the minimum window size.
     ui_->navigation->setFixedWidth(120);
-    ui_->bodyLayout->setStretch(1, 1);
+    ui_->rootLayout->setColumnStretch(1, 1);
     connectSignals();
     setInstance(name, modded);
 }
@@ -62,6 +63,7 @@ void InstanceWindow::connectSignals() {
 }
 
 void InstanceWindow::setInstance(const QString& name, bool modded) {
+    instanceName_ = name;
     ui_->detailTitle->setText(name);
     setWindowTitle(name + " — Instance");
     {
@@ -70,6 +72,15 @@ void InstanceWindow::setInstance(const QString& name, bool modded) {
     }
     refreshPathStatus();
 }
+
+void InstanceWindow::setInstanceDirectory(const QString& directory) {
+    explicitInstanceDirectory_ = true;
+    instanceDirectory_ = directory.isEmpty() ? QString{} : QDir(directory).absolutePath();
+    installedMods_->setModsDirectory(
+        instanceDirectory_.isEmpty() ? QString{} : QDir(instanceDirectory_).filePath("Mods"));
+}
+
+QString InstanceWindow::instanceName() const { return instanceName_; }
 
 void InstanceWindow::selectTab(int tab) {
     if (tab < 0 || tab >= ui_->navigation->count()) return;
@@ -106,6 +117,18 @@ void InstanceWindow::launchGame() {
     }
     const auto directory = config_->gameDirectory();
     const bool modded = ui_->launchMode->currentIndex() == 1;
+    if (modded && explicitInstanceDirectory_) {
+        const QFileInfo instance(instanceDirectory_);
+        const QFileInfo mods(QDir(instanceDirectory_).filePath("Mods"));
+        const bool regularInstance = !instanceDirectory_.isEmpty() && instance.isDir() &&
+                                     !instance.isSymLink() &&
+                                     instance.canonicalFilePath() == instance.absoluteFilePath();
+        if (!regularInstance || !mods.isDir() || mods.isSymLink()) {
+            logWindow_->appendMessage("The instance Mods folder is missing or contains a link.",
+                                      LogWindow::Severity::Error);
+            return;
+        }
+    }
     if (modded) {
         const auto smapi = SmapiDetector().inspect(directory);
         if (!smapi.isInstalled()) {
@@ -144,7 +167,10 @@ void InstanceWindow::launchGame() {
         environment.insert("SMAPI_USE_CURRENT_SHELL", "true");
         // SMAPI's supported developer output includes severity and trace records.
         // Ordinary console prefixes contain only the mod name, losing severity in pipes.
-        child->setArguments({"--developer-mode"});
+        QStringList arguments{"--developer-mode"};
+        if (explicitInstanceDirectory_)
+            arguments.append({"--mods-path", QDir(instanceDirectory_).filePath("Mods")});
+        child->setArguments(arguments);
     }
     child->setProcessEnvironment(environment);
 

@@ -1,6 +1,7 @@
 #include <QComboBox>
 #include <QDesktopServices>
 #include <QDialog>
+#include <QDialogButtonBox>
 #include <QDir>
 #include <QFile>
 #include <QFileDialog>
@@ -91,7 +92,7 @@ class LauncherTests : public QObject {
         qApp->setStyleSheet(style.readAll());
     }
 
-    /// @brief The instance Console tab contains the live console without a standalone log window.
+    /// @brief The instance Logs tab contains the live console without a standalone log window.
     void consoleIsEmbeddedInInstanceTab() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
@@ -101,9 +102,9 @@ class LauncherTests : public QObject {
         QVERIFY(instance);
         auto* navigation = instance->findChild<QListWidget*>("navigation");
         QVERIFY(navigation);
-        const auto consoleItems = navigation->findItems("Console", Qt::MatchExactly);
-        QCOMPARE(consoleItems.size(), 1);
-        navigation->setCurrentItem(consoleItems.first());
+        const auto logsItems = navigation->findItems("Logs", Qt::MatchExactly);
+        QCOMPARE(logsItems.size(), 1);
+        navigation->setCurrentItem(logsItems.first());
         auto* console = instance->findChild<LogWindow*>();
         QVERIFY(console);
         QVERIFY2(!console->isWindow(), "Console must be embedded rather than a standalone window.");
@@ -117,7 +118,7 @@ class LauncherTests : public QObject {
         QVERIFY(!instance->findChild<QPushButton*>("openLogs"));
         console->appendMessage("retained across navigation");
         navigation->setCurrentRow(0);
-        navigation->setCurrentItem(consoleItems.first());
+        navigation->setCurrentItem(logsItems.first());
         QCOMPARE(console->findChild<QTableWidget*>("logs")->rowCount(), 1);
     }
 
@@ -438,13 +439,16 @@ class LauncherTests : public QObject {
                  QDir::homePath() + "/.local/share/Steam/steamapps/common/Stardew Valley");
     }
 
-    void createSessionInstance() {
+    /// @brief Creating an instance saves its folder and opens the selected detail window.
+    void createSavedInstance() {
         QTemporaryDir temp;
         LauncherWindow window(temp.filePath("launcher.ini"));
         QTimer::singleShot(0, &window, [] {
             if (auto* dialog = qobject_cast<QDialog*>(QApplication::activeModalWidget())) {
                 dialog->findChild<QLineEdit*>()->setText("Test farm");
-                dialog->accept();
+                dialog->findChild<QDialogButtonBox*>("buttons")
+                    ->button(QDialogButtonBox::Ok)
+                    ->click();
             }
         });
         auto* addButton = window.findChild<QPushButton*>("addInstance");
@@ -491,34 +495,46 @@ class LauncherTests : public QObject {
         QVERIFY(!instanceWindow->isVisible());
     }
 
+    /// @brief Keeps the main-menu ChickPix toggle persistent while opacity lives only in settings.
     void farmPackToggleIsAvailableAndPersistent() {
         QTemporaryDir temp;
-        LauncherWindow window(temp.filePath("launcher.ini"));
+        QVERIFY(temp.isValid());
+        const auto configFile = temp.filePath("launcher.ini");
+        LauncherConfig config(configFile);
+        QVERIFY(config.saveFarmPackOpacityPercent(42));
+        LauncherWindow window(configFile);
         window.show();
         QApplication::processEvents();
         auto* toggle = window.findChild<QPushButton*>("farmPackToggle");
-        auto* opacity = window.findChild<QSlider*>("farmPackOpacity");
         auto* overlay = window.findChild<QLabel*>("farmPackOverlay");
         QVERIFY(toggle);
-        QVERIFY(opacity);
         QVERIFY(overlay);
+        QCOMPARE(toggle->text(), QString("ChickPix"));
+        QVERIFY(!window.findChild<QSlider*>("farmPackOpacity"));
+        QVERIFY(!window.findChild<QLabel*>("farmPackOpacityLabel"));
         QVERIFY(toggle->isCheckable());
         QVERIFY(toggle->isEnabled());
         QVERIFY(toggle->isChecked());
-        QCOMPARE(opacity->value(), 75);
+        QCOMPARE(config.farmPackOpacityPercent(), 42);
         QVERIFY(!overlay->pixmap().isNull());
         QVERIFY(overlay->isVisible());
+        const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
+        if (!screenshots.isEmpty()) {
+            QVERIFY(QDir().mkpath(screenshots));
+            QVERIFY(window.grab().save(screenshots + "/chickpix-library.png"));
+        }
 
         toggle->click();
-
         QVERIFY(!toggle->isChecked());
         QVERIFY(!overlay->isVisible());
-        QVERIFY(!LauncherConfig(temp.filePath("launcher.ini")).farmPackEnabled());
+        QVERIFY(!config.farmPackEnabled());
+        LauncherWindow reopened(configFile);
+        QVERIFY(!reopened.findChild<QPushButton*>("farmPackToggle")->isChecked());
 
         toggle->click();
         QVERIFY(overlay->isVisible());
-        opacity->setValue(42);
-        QCOMPARE(LauncherConfig(temp.filePath("launcher.ini")).farmPackOpacityPercent(), 42);
+        QVERIFY(config.farmPackEnabled());
+        QCOMPARE(config.farmPackOpacityPercent(), 42);
     }
 
     /// @brief Updates the library mode and emits one notification when the instance mode changes.

@@ -646,7 +646,7 @@ class LogWindowTests : public QObject {
 #endif
     }
 
-    /// @brief Captures the populated Console tab inside its instance when requested by the runner.
+    /// @brief Captures the populated Logs tab inside its instance when requested by the runner.
     void consolePreview() {
         const auto screenshots = qEnvironmentVariable("PRISMATIC_SCREENSHOTS");
         if (screenshots.isEmpty()) return;
@@ -656,9 +656,9 @@ class LogWindowTests : public QObject {
         InstanceWindow window("Console fixture", false, &config);
         auto* navigation = window.findChild<QListWidget*>("navigation");
         QVERIFY(navigation);
-        const auto consoleItems = navigation->findItems("Console", Qt::MatchExactly);
-        QCOMPARE(consoleItems.size(), 1);
-        navigation->setCurrentItem(consoleItems.first());
+        const auto logsItems = navigation->findItems("Logs", Qt::MatchExactly);
+        QCOMPARE(logsItems.size(), 1);
+        navigation->setCurrentItem(logsItems.first());
         auto* console = window.findChild<LogWindow*>();
         QVERIFY(console);
         console->appendMessage("Launching Stardew Valley");

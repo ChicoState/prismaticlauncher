@@ -40,6 +40,7 @@ QString gameRoot(const QString& directory) {
     return QDir(QFileInfo(bundle).isDir() ? bundle : directory).absolutePath();
 }
 
+/// @brief Requires an existing game folder containing a recognized Stardew Valley game file.
 void validateGame(const QString& directory) {
     if (directory.isEmpty() || !QDir::isAbsolutePath(directory) || !QFileInfo(directory).isDir())
         fail("Choose an existing Stardew Valley game directory in Settings.");
@@ -50,9 +51,26 @@ void validateGame(const QString& directory) {
             return QFileInfo(game.filePath(marker)).isFile();
         }))
         fail("This folder does not contain Stardew Valley. Choose the game directory in Settings.");
-    const QFileInfo mods(game.filePath("Mods"));
+}
+
+/// @brief Resolves a mods destination and rejects links, special files, or missing instance
+/// parents.
+QString destinationDirectory(const QString& gameDirectory, const QString& explicitDirectory) {
+    const auto directory = explicitDirectory.isEmpty() ? ModInstaller::modsDirectory(gameDirectory)
+                                                       : QDir::cleanPath(explicitDirectory);
+    if (!QDir::isAbsolutePath(directory)) fail("The Mods destination must be an absolute path.");
+    const QFileInfo mods(directory);
     if (mods.isSymLink() || (mods.exists() && !mods.isDir()))
         fail("The Mods destination must be a regular directory, not a link or file.");
+    if (!explicitDirectory.isEmpty()) {
+        QDir ancestor = mods.absoluteDir();
+        if (!ancestor.exists()) fail("The instance directory no longer exists.");
+        do {
+            if (QFileInfo(ancestor.absolutePath()).isSymLink())
+                fail("The instance destination cannot contain linked directories.");
+        } while (ancestor.cdUp());
+    }
+    return directory;
 }
 
 struct Budget {
@@ -328,11 +346,12 @@ QString ModInstaller::modsDirectory(const QString& gameDirectory) {
     return QDir(gameRoot(gameDirectory)).filePath("Mods");
 }
 
-ModInstallResult ModInstaller::installed(const QString& gameDirectory) {
+ModInstallResult ModInstaller::installed(const QString& gameDirectory,
+                                         const QString& explicitModsDirectory) {
     try {
         validateGame(gameDirectory);
         ModInstallResult result;
-        const auto directory = modsDirectory(gameDirectory);
+        const auto directory = destinationDirectory(gameDirectory, explicitModsDirectory);
         if (QFileInfo::exists(directory)) {
             Budget budget;
             discover(directory, result.mods, budget, false);
@@ -346,17 +365,19 @@ ModInstallResult ModInstaller::installed(const QString& gameDirectory) {
     }
 }
 
-ModInstallResult ModInstaller::install(const QStringList& sources, const QString& gameDirectory) {
+ModInstallResult ModInstaller::install(const QStringList& sources, const QString& gameDirectory,
+                                       const QString& explicitModsDirectory) {
     QStringList published;
     try {
         validateGame(gameDirectory);
         if (sources.isEmpty()) fail("Select at least one mod folder or file.");
-        const auto existing = installed(gameDirectory);
+        const auto existing = installed(gameDirectory, explicitModsDirectory);
         if (!existing.succeeded()) fail(existing.error);
         const auto game = QFileInfo(gameRoot(gameDirectory)).canonicalFilePath();
-        const auto destination = modsDirectory(game);
-        QTemporaryDir staging(QDir(game).filePath(".prismatic-install-XXXXXX"));
-        if (!staging.isValid()) fail("Cannot stage mods. Check game-folder write permissions.");
+        const auto destination = destinationDirectory(gameDirectory, explicitModsDirectory);
+        const auto installRoot = QFileInfo(destination).absolutePath();
+        QTemporaryDir staging(QDir(installRoot).filePath(".prismatic-install-XXXXXX"));
+        if (!staging.isValid()) fail("Cannot stage mods. Check destination write permissions.");
         Budget budget;
         QSet<QString> roots;
         QList<InstalledMod> candidates;
@@ -367,6 +388,8 @@ ModInstallResult ModInstaller::install(const QStringList& sources, const QString
             const bool archived = isArchive(info);
             const auto root = archived ? info.canonicalFilePath() : sourceRoot(source);
             if (overlaps(root, game)) fail("Select mod downloads outside the game directory.");
+            if (overlaps(root, installRoot))
+                fail("Select mod downloads outside the destination instance directory.");
             if (roots.contains(root)) continue;
             roots.insert(root);
             const auto package = QDir(staging.path()).filePath(QString::number(roots.size()));

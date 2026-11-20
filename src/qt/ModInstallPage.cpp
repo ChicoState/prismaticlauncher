@@ -44,7 +44,7 @@ ModInstallPage::ModInstallPage(LauncherConfig* config, QWidget* parent)
     setObjectName("modInstallPage");
     setAcceptDrops(true);
     auto* layout = new QVBoxLayout(this);
-    layout->setContentsMargins(16, 16, 16, 16);
+    layout->setContentsMargins(16, 0, 16, 16);
     layout->setSpacing(12);
     auto* heading = new QHBoxLayout;
     heading->addWidget(plainLabel("Installed mods", "modsTitle", this), 1);
@@ -123,6 +123,15 @@ ModInstallPage::~ModInstallPage() {
     if (worker_) worker_->wait();
 }
 
+void ModInstallPage::setModsDirectory(const QString& directory) {
+    explicitDestination_ = true;
+    modsDirectory_ = directory;
+    table_->setRowCount(0);
+    result_->clear();
+    result_->hide();
+    refresh();
+}
+
 void ModInstallPage::refresh() { startOperation({}, false); }
 void ModInstallPage::installSources(const QStringList& sources) {
     if (!sources.isEmpty()) startOperation(sources, true);
@@ -131,7 +140,17 @@ void ModInstallPage::installSources(const QStringList& sources) {
 void ModInstallPage::startOperation(const QStringList& sources, bool installing) {
     if (isBusy()) return;
     const auto directory = config_->gameDirectory();
-    destination_->setText("Installing to: " + ModInstaller::modsDirectory(directory));
+    const auto modsDirectory = modsDirectory_;
+    const bool explicitDestination = explicitDestination_;
+    if (explicitDestination_ && modsDirectory.isEmpty()) {
+        destination_->setText("No instance destination selected.");
+        status_->setText("Select an instance before installing mods.");
+        emit operationFinished(false);
+        return;
+    }
+    const auto destination =
+        modsDirectory.isEmpty() ? ModInstaller::modsDirectory(directory) : modsDirectory;
+    destination_->setText("Installing to: " + destination);
     status_->setText(installing ? "Validating and installing mods…" : "Reading installed mods…");
     files_->setEnabled(false);
     folder_->setEnabled(false);
@@ -141,56 +160,60 @@ void ModInstallPage::startOperation(const QStringList& sources, bool installing)
         ModInstallResult listing;
     };
     const auto work = std::make_shared<Work>();
-    worker_ = QThread::create([sources, directory, installing, work] {
-        if (installing) work->install = ModInstaller::install(sources, directory);
-        work->listing = ModInstaller::installed(directory);
+    worker_ = QThread::create([sources, directory, modsDirectory, installing, work] {
+        if (installing) work->install = ModInstaller::install(sources, directory, modsDirectory);
+        work->listing = ModInstaller::installed(directory, modsDirectory);
     });
     worker_->setParent(this);
-    connect(worker_, &QThread::finished, this, [this, directory, installing, work] {
-        worker_->deleteLater();
-        worker_ = nullptr;
-        files_->setEnabled(true);
-        folder_->setEnabled(true);
-        refresh_->setEnabled(true);
-        if (installing) {
-            QStringList names;
-            for (const auto& mod : work->install.mods) names.append(mod.name);
-            const auto message =
-                work->install.succeeded()
-                    ? QString("Installed %1 mod(s) into %2.\n%3")
-                          .arg(work->install.mods.size())
-                          .arg(ModInstaller::modsDirectory(directory), names.join(", "))
-                    : "Installation failed: " + work->install.error;
-            result_->setPlainText(message);
-            result_->show();
-            emit activity(message);
-        }
-        const bool changed = config_->gameDirectory() != directory;
-        table_->setRowCount(0);
-        if (!changed) {
-            for (const auto& mod : work->listing.mods) {
-                const int row = table_->rowCount();
-                table_->insertRow(row);
-                const QStringList values{mod.name, mod.version, mod.uniqueId};
-                for (int column = 0; column < values.size(); ++column) {
-                    auto* item = new QTableWidgetItem(values.at(column));
-                    item->setToolTip(mod.directory);
-                    table_->setItem(row, column, item);
+    connect(worker_, &QThread::finished, this,
+            [this, directory, modsDirectory, explicitDestination, destination, installing, work] {
+                worker_->deleteLater();
+                worker_ = nullptr;
+                files_->setEnabled(true);
+                folder_->setEnabled(true);
+                refresh_->setEnabled(true);
+                const bool changed = config_->gameDirectory() != directory ||
+                                     modsDirectory_ != modsDirectory ||
+                                     explicitDestination_ != explicitDestination;
+                if (installing) {
+                    QStringList names;
+                    for (const auto& mod : work->install.mods) names.append(mod.name);
+                    const auto message = work->install.succeeded()
+                                             ? QString("Installed %1 mod(s) into %2.\n%3")
+                                                   .arg(work->install.mods.size())
+                                                   .arg(destination, names.join(", "))
+                                             : "Installation failed: " + work->install.error;
+                    if (!changed) {
+                        result_->setPlainText(message);
+                        result_->show();
+                    }
+                    emit activity(message);
                 }
-            }
-            if (!work->listing.succeeded()) {
-                status_->setText(work->listing.error);
-            } else if (table_->rowCount() == 0) {
-                status_->setText(
-                    "No mods installed. Drop a download or choose files to get started.");
-            } else {
-                status_->setText(QString("%1 installed mod(s)").arg(table_->rowCount()));
-            }
-        }
-        emit operationFinished((!installing || work->install.succeeded()) &&
-                               work->listing.succeeded());
-        if (changed) refresh();
-    });
+                table_->setRowCount(0);
+                if (!changed) {
+                    for (const auto& mod : work->listing.mods) {
+                        const int row = table_->rowCount();
+                        table_->insertRow(row);
+                        const QStringList values{mod.name, mod.version, mod.uniqueId};
+                        for (int column = 0; column < values.size(); ++column) {
+                            auto* item = new QTableWidgetItem(values.at(column));
+                            item->setToolTip(mod.directory);
+                            table_->setItem(row, column, item);
+                        }
+                    }
+                    if (!work->listing.succeeded()) {
+                        status_->setText(work->listing.error);
+                    } else if (table_->rowCount() == 0) {
+                        status_->setText(
+                            "No mods installed. Drop a download or choose files to get started.");
+                    } else {
+                        status_->setText(QString("%1 installed mod(s)").arg(table_->rowCount()));
+                    }
+                }
+                emit operationFinished((!installing || work->install.succeeded()) &&
+                                       work->listing.succeeded());
+                if (changed) refresh();
+            });
     worker_->start();
 }
 

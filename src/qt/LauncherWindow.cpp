@@ -1,26 +1,27 @@
 #include "LauncherWindow.h"
 
-#include <QDate>
 #include <QDialog>
 #include <QDialogButtonBox>
+#include <QEvent>
 #include <QFileInfo>
+#include <QFormLayout>
 #include <QGraphicsOpacityEffect>
 #include <QLabel>
 #include <QListWidget>
 #include <QMessageBox>
 #include <QPainter>
 #include <QPushButton>
-#include <QResizeEvent>
 #include <QResource>
-#include <QSlider>
+#include <QSignalBlocker>
 #include <QStackedWidget>
 #include <QStatusBar>
 
-#include "settings.h"
+#include "ChickPixImages.h"
 #include "InstanceWindow.h"
 #include "NexusPage.h"
 #include "SmapiDetector.h"
 #include "SmapiWindow.h"
+#include "settings.h"
 #include "ui_AddInstanceDialog.h"
 #include "ui_LauncherWindow.h"
 
@@ -28,6 +29,13 @@ const int INSTANCE_WIDTH = 146;
 const int INSTANCE_HEIGHT = 162;
 
 namespace {
+enum InstanceItemRole {
+    InstanceNameRole = Qt::UserRole,
+    InstanceModdedRole,
+    InstanceDirectoryRole,
+};
+
+/// @brief Draws the instance artwork or a built-in fallback icon.
 QIcon instanceIcon(const QString& imagePath = {}) {
     QPixmap art(160, 160);
     art.fill(QColor("#253e39"));
@@ -59,7 +67,10 @@ QIcon instanceIcon(const QString& imagePath = {}) {
 }  // namespace
 
 LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
-    : QMainWindow(parent), config_(configFile), ui_(std::make_unique<Ui::LauncherWindow>()) {
+    : QMainWindow(parent),
+      config_(configFile),
+      instances_(InstanceStore::rootForConfig(configFile)),
+      ui_(std::make_unique<Ui::LauncherWindow>()) {
     Q_INIT_RESOURCE(resources);
     ui_->setupUi(this);
     auto* library = takeCentralWidget();
@@ -82,7 +93,7 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     });
     resize(1120, 760);
     setWindowIcon(QIcon(":/resources/logo.png"));
-    statusBar()->showMessage("Local launcher  /  UI preview");
+    statusBar()->showMessage("Local instance library");
 
     farmPackOverlay_ = new QLabel(ui_->centralWidget);
     farmPackOverlay_->setObjectName("farmPackOverlay");
@@ -90,19 +101,9 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
     farmPackOverlay_->setStyleSheet("background: transparent;");
     farmPackOpacityEffect_ = new QGraphicsOpacityEffect(farmPackOverlay_);
     farmPackOverlay_->setGraphicsEffect(farmPackOpacityEffect_);
+    ui_->centralWidget->installEventFilter(this);
 
-    const auto packResult = FarmPack::load(":/farmpack/manifest.json");
-    if (packResult.has_value()) {
-        farmPack_ = packResult.pack;
-        farmPackLoaded_ = true;
-        farmPackEnabled_ = config_.farmPackEnabled();
-    }
-    ui_->farmPackToggle->setChecked(farmPackEnabled_);
-    ui_->farmPackToggle->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-    ui_->farmPackOpacity->setEnabled(farmPackLoaded_);
-    ui_->farmPackOpacityLabel->setEnabled(farmPackLoaded_);
-    farmPackOpacityEffect_->setOpacity(ui_->farmPackOpacity->value() / 100.0);
+    reloadChickPix();
 
     connectSignals();
     populateInstances();
@@ -112,33 +113,23 @@ LauncherWindow::LauncherWindow(const QString& configFile, QWidget* parent)
 LauncherWindow::~LauncherWindow() = default;
 
 void LauncherWindow::connectSignals() {
-    connect(ui_->settings, &QPushButton::clicked, this,
-            &LauncherWindow::openSettingsWindow);
-    connect(ui_->instanceSearch, &QLineEdit::textChanged, this,
-            &LauncherWindow::filterInstances);
+    connect(ui_->settings, &QPushButton::clicked, this, &LauncherWindow::openSettingsWindow);
+    connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->smapi, &QPushButton::clicked, this, &LauncherWindow::openSmapiWindow);
     connect(ui_->instanceSearch, &QLineEdit::textChanged, this, &LauncherWindow::filterInstances);
     connect(ui_->addInstance, &QPushButton::clicked, this, &LauncherWindow::addInstance);
     connect(ui_->editInstance, &QPushButton::clicked, this, [this] { openInstanceWindow(); });
     connect(ui_->farmPackToggle, &QPushButton::toggled, this, [this](bool enabled) {
         if (!config_.saveFarmPackEnabled(enabled)) {
+            const QSignalBlocker blocker(ui_->farmPackToggle);
             ui_->farmPackToggle->setChecked(farmPackEnabled_);
-            statusBar()->showMessage("Could not save Pack setting.");
+            statusBar()->showMessage("Could not save ChickPix setting.");
             return;
         }
         farmPackEnabled_ = enabled;
         refreshFarmPackOverlay();
         statusBar()->showMessage(enabled ? "ChickPix artwork enabled."
                                          : "ChickPix artwork disabled.");
-    });
-    connect(ui_->farmPackOpacity, &QSlider::valueChanged, this, [this](int value) {
-        farmPackOpacityEffect_->setOpacity(value / 100.0);
-        if (!config_.saveFarmPackOpacityPercent(value)) {
-            ui_->farmPackOpacity->setValue(config_.farmPackOpacityPercent());
-            statusBar()->showMessage("Could not save Pack opacity.");
-            return;
-        }
-        refreshFarmPackOverlay();
     });
     connect(ui_->playInstance, &QPushButton::clicked, this, &LauncherWindow::launchGame);
     connect(ui_->instances, &QListWidget::itemActivated, this, [this] { openInstanceWindow(); });
@@ -158,11 +149,42 @@ void LauncherWindow::openSmapiWindow() {
 }
 
 void LauncherWindow::populateInstances() {
-    auto* item = new QListWidgetItem(instanceIcon(), "Stardew Valley\nVanilla", ui_->instances);
+    ui_->instances->clear();
+    QString error;
+    if (!instances_.initialize(&error)) {
+        ui_->addInstance->setEnabled(false);
+        statusBar()->showMessage(error);
+        return;
+    }
+    QStringList warnings;
+    const auto records = instances_.load(&warnings);
+    for (const auto& record : records) appendInstance(record);
+    if (ui_->instances->count() > 0) ui_->instances->setCurrentRow(0);
+    if (!warnings.isEmpty()) statusBar()->showMessage(warnings.join("\n"));
+}
+
+void LauncherWindow::appendInstance(const InstanceRecord& record) {
+    auto* item = new QListWidgetItem(
+        instanceIcon(), record.name + (record.modded ? "\nModded" : "\nVanilla"), ui_->instances);
     item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
-    item->setData(Qt::UserRole, "Stardew Valley");
-    item->setData(Qt::UserRole + 1, false);
-    ui_->instances->setCurrentItem(item);
+    item->setData(InstanceNameRole, record.name);
+    item->setData(InstanceModdedRole, record.modded);
+    item->setData(InstanceDirectoryRole, record.directory);
+}
+
+void LauncherWindow::reloadChickPix() {
+    const ChickPixImages images(config_.filePath());
+    const auto selection = images.resolveSelection(config_.farmPackImage(), images.catalog());
+    auto image = images.load(selection);
+    if (image.isNull()) image = images.load(ChickPixImages::defaultImage());
+    farmPackImage_ = QPixmap::fromImage(image);
+    farmPackLoaded_ = !farmPackImage_.isNull();
+    farmPackEnabled_ = config_.farmPackEnabled();
+    const QSignalBlocker toggleBlocker(ui_->farmPackToggle);
+    ui_->farmPackToggle->setChecked(farmPackEnabled_);
+    ui_->farmPackToggle->setEnabled(farmPackLoaded_);
+    farmPackOpacityEffect_->setOpacity(config_.farmPackOpacityPercent() / 100.0);
+    refreshFarmPackOverlay();
 }
 
 void LauncherWindow::refreshFarmPackOverlay() {
@@ -171,17 +193,11 @@ void LauncherWindow::refreshFarmPackOverlay() {
         return;
     }
 
-    const QPixmap source(farmPack_.imageForDate(QDate::currentDate()));
-    if (source.isNull()) {
-        farmPackOverlay_->hide();
-        return;
-    }
-
     const auto* central = ui_->centralWidget;
     const int targetWidth = qBound(220, central->width() * 30 / 100, 420);
     const int targetHeight = qMax(220, central->height() * 55 / 100);
-    const auto image =
-        source.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio, Qt::SmoothTransformation);
+    const auto image = farmPackImage_.scaled(targetWidth, targetHeight, Qt::KeepAspectRatio,
+                                             Qt::SmoothTransformation);
     farmPackOverlay_->setPixmap(image);
     farmPackOverlay_->adjustSize();
     farmPackOverlay_->move(central->width() - farmPackOverlay_->width() - 20,
@@ -201,27 +217,34 @@ void LauncherWindow::addInstance() {
     QDialog dialog(this);
     Ui::AddInstanceDialog dialogUi;
     dialogUi.setupUi(&dialog);
+    auto* errorLabel = new QLabel(&dialog);
+    errorLabel->setObjectName("instanceError");
+    errorLabel->setTextFormat(Qt::PlainText);
+    errorLabel->setWordWrap(true);
+    dialogUi.formLayout->insertRow(3, errorLabel);
     dialogUi.buttons->button(QDialogButtonBox::Ok)->setText("Create instance");
     dialogUi.buttons->button(QDialogButtonBox::Ok)
         ->setEnabled(!dialogUi.name->text().trimmed().isEmpty());
     connect(dialogUi.name, &QLineEdit::textChanged, &dialog, [&dialogUi](const QString& value) {
         dialogUi.buttons->button(QDialogButtonBox::Ok)->setEnabled(!value.trimmed().isEmpty());
     });
-
-    if (dialog.exec() != QDialog::Accepted) {
-        return;
-    }
-
-    const bool modded = dialogUi.mode->currentIndex() == 1;
-    auto* item = new QListWidgetItem(
-        instanceIcon(), dialogUi.name->text().trimmed() + (modded ? "\nModded" : "\nVanilla"),
-        ui_->instances);
-    item->setSizeHint(QSize(INSTANCE_WIDTH, INSTANCE_HEIGHT));
-    item->setData(Qt::UserRole, dialogUi.name->text().trimmed());
-    item->setData(Qt::UserRole + 1, modded);
+    // The generated dialog accepts automatically; wait for a successful filesystem commit instead.
+    disconnect(dialogUi.buttons, &QDialogButtonBox::accepted, &dialog, &QDialog::accept);
+    InstanceRecord created;
+    connect(dialogUi.buttons, &QDialogButtonBox::accepted, &dialog, [&] {
+        QString error;
+        if (!instances_.create(dialogUi.name->text(), dialogUi.mode->currentIndex() == 1, &created,
+                               &error)) {
+            errorLabel->setText(error);
+            return;
+        }
+        dialog.accept();
+    });
+    if (dialog.exec() != QDialog::Accepted || created.name.isEmpty()) return;
+    appendInstance(created);
     ui_->instanceSearch->clear();
     filterInstances({});
-    ui_->instances->setCurrentItem(item);
+    ui_->instances->setCurrentRow(ui_->instances->count() - 1);
     openInstanceWindow();
 }
 
@@ -232,22 +255,35 @@ void LauncherWindow::openInstanceWindow(int tab) {
         return;
     }
 
-    const auto name = item->data(Qt::UserRole).toString();
-    const auto modded = item->data(Qt::UserRole + 1).toBool();
+    const auto name = item->data(InstanceNameRole).toString();
+    const auto modded = item->data(InstanceModdedRole).toBool();
     if (!instanceWindow_) {
         instanceWindow_ = new InstanceWindow(name, modded, &config_, this);
         connect(instanceWindow_, &InstanceWindow::settingsRequested, this,
                 &LauncherWindow::openSettingsWindow);
         connect(instanceWindow_, &InstanceWindow::launchModeChanged, this, [this](bool enabled) {
-            if (auto* current = ui_->instances->currentItem()) {
-                current->setData(Qt::UserRole + 1, enabled);
-                current->setText(current->data(Qt::UserRole).toString() +
-                                 (enabled ? "\nModded" : "\nVanilla"));
+            const auto editedName = instanceWindow_->instanceName();
+            for (int row = 0; row < ui_->instances->count(); ++row) {
+                auto* edited = ui_->instances->item(row);
+                if (edited->data(InstanceNameRole).toString() != editedName) continue;
+                QString error;
+                if (!instances_.saveMode(editedName, enabled, &error)) {
+                    instanceWindow_->setInstance(editedName,
+                                                 edited->data(InstanceModdedRole).toBool());
+                    statusBar()->showMessage(error);
+                    instanceWindow_->statusBar()->showMessage(error);
+                    return;
+                }
+                edited->setData(InstanceModdedRole, enabled);
+                edited->setText(editedName + (enabled ? "\nModded" : "\nVanilla"));
+                filterInstances(ui_->instanceSearch->text());
+                return;
             }
         });
     } else {
         instanceWindow_->setInstance(name, modded);
     }
+    instanceWindow_->setInstanceDirectory(item->data(InstanceDirectoryRole).toString());
     instanceWindow_->selectTab(tab);
     instanceWindow_->show();
     instanceWindow_->raise();
@@ -257,6 +293,7 @@ void LauncherWindow::openInstanceWindow(int tab) {
 void LauncherWindow::openSettingsWindow() {
     if (!settingsWindow_) {
         settingsWindow_ = new settings(&config_, this);
+        connect(settingsWindow_, &settings::chickPixChanged, this, &LauncherWindow::reloadChickPix);
         connect(settingsWindow_, &settings::gameDirectoryChanged, this, [this] {
             if (instanceWindow_) instanceWindow_->refreshGameDirectory();
             statusBar()->showMessage("Game path saved.");
@@ -285,7 +322,11 @@ void LauncherWindow::launchGame() {
     instanceWindow_->launchGame();
 }
 
-void LauncherWindow::resizeEvent(QResizeEvent* event) {
-    QMainWindow::resizeEvent(event);
-    refreshFarmPackOverlay();
+bool LauncherWindow::eventFilter(QObject* watched, QEvent* event) {
+    if (farmPackOverlay_ && watched == ui_->centralWidget &&
+        (event->type() == QEvent::Resize || event->type() == QEvent::Show)) {
+        // The library gets its actual geometry after the main window's resize event.
+        refreshFarmPackOverlay();
+    }
+    return QMainWindow::eventFilter(watched, event);
 }

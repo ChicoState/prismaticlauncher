@@ -14,6 +14,9 @@ class ModInstallPage : public QWidget {
    public:
     explicit ModInstallPage(LauncherConfig* config, QWidget* parent = nullptr);
     ~ModInstallPage() override;
+    /// @brief Selects an explicit mods folder and refreshes it when no operation is running.
+    /// Once selected, an empty destination is an error rather than a shared-game fallback.
+    void setModsDirectory(const QString& directory);
     void refresh();
     void installSources(const QStringList& sources);
     [[nodiscard]] bool isBusy() const { return worker_ != nullptr; }
@@ -30,9 +33,12 @@ class ModInstallPage : public QWidget {
     void showEvent(QShowEvent* event) override;
 
    private:
+    /// @brief Runs installation or listing against a snapshot of the game and mods destinations.
     void startOperation(const QStringList& sources, bool installing);
     void setDropActive(bool active);
     LauncherConfig* config_;
+    QString modsDirectory_;
+    bool explicitDestination_ = false;
     QThread* worker_ = nullptr;
     QWidget* dropZone_;
     QLabel* destination_;

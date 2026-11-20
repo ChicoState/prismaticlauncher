@@ -2,8 +2,10 @@
 
 #include <QFileDialog>
 #include <QFileInfo>
+#include <QResource>
 #include <utility>
 
+#include "ChickPixDialog.h"
 #include "LauncherConfig.h"
 #include "ui_settings.h"
 
@@ -12,7 +14,9 @@ settings::settings(LauncherConfig* config, QWidget* parent, GameDirectoryDetecto
       config_(config),
       detector_(std::move(detector)),
       ui(new Ui::settings) {
+    Q_INIT_RESOURCE(resources);
     ui->setupUi(this);
+    ui->pathStatus->setTextFormat(Qt::PlainText);
     connect(ui->backLibrary, &QPushButton::clicked, this, [this] {
         close();
         emit backToLibraryRequested();
@@ -23,11 +27,27 @@ settings::settings(LauncherConfig* config, QWidget* parent, GameDirectoryDetecto
         if (!directory.isEmpty()) ui->gameDirectoryValue->setText(directory);
     });
     connect(ui->savePath, &QPushButton::clicked, this, &settings::saveGameDirectory);
+    connect(ui->configureChickPix, &QPushButton::clicked, this, &settings::configureChickPix);
     connect(ui->detectDirectory, &QPushButton::clicked, this, &settings::detectGameDirectory);
     reload();
 }
 
 settings::~settings() { delete ui; }
+
+void settings::configureChickPix() {
+    if (chickPixDialog_ && chickPixDialog_->isVisible()) {
+        chickPixDialog_->raise();
+        chickPixDialog_->activateWindow();
+        return;
+    }
+    if (!chickPixDialog_) {
+        chickPixDialog_ = new ChickPixDialog(config_, this);
+        connect(chickPixDialog_, &ChickPixDialog::saved, this, &settings::chickPixChanged);
+    } else {
+        chickPixDialog_->reload();
+    }
+    chickPixDialog_->show();
+}
 
 void settings::reload() {
     const auto directory = config_->gameDirectory();

@@ -39,7 +39,7 @@ Prefer visible Sessions/chat delegation when the client exposes `create_session`
 ## Boundaries
 
 - Do not add product UI, game discovery, mod-management behavior, domain schema, or release packaging while doing infrastructure-only work.
-- Do not change the selected C++20, Qt 6, vcpkg, SQLite, Docker, or GitHub Release decisions without revising `documents/infrastructure_plan.md` through `infra-planner`.
+- Do not change the selected C++20, Qt 6, vcpkg, directory-based local persistence, Docker, or GitHub Release decisions without revising `documents/infrastructure_plan.md` through `infra-planner`.
 - Do not commit secrets, signing certificates, generated build output, coverage reports, vcpkg installations, or local game/mod data.
 - Docker validates Linux only; it does not replace native Windows/macOS packaging, signing, or macOS notarization.
 
